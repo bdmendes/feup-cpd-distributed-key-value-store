@@ -1,6 +1,6 @@
 CC = g++
-CFLAGS = -Wall -O2
-CLIBS = -lpapi
+CPPFLAGS = -O2
+CPPLIBS = -lpapi
 PROG_NAME = matrixmul
 
 SRCDIR = src
@@ -13,7 +13,7 @@ CPP_OBJECTS := $(CPP_SOURCES:%.cpp=%.o)
 all: $(PROG_NAME)-cpp
 
 $(PROG_NAME)-cpp: $(CPP_OBJECTS)
-	$(CC) $(CFLAGS) $(CLIBS) -o $(PROG_NAME)-cpp $(CPP_OBJECTS)
+	$(CC) $(CPPFLAGS) $(CPPLIBS) -o $(PROG_NAME)-cpp $(CPP_OBJECTS)
 
 clean:
-	rm -f $(PROG_NAME)-cpp
+	rm -f $(PROG_NAME)-cpp $(CPP_OBJECTS)
