@@ -1,3 +1,4 @@
+use std::cmp;
 use std::io::Write;
 use std::time::Instant;
 
@@ -63,7 +64,19 @@ fn main() {
         match operation {
             1 => mult(m_size),
             2 => mult_line(m_size),
-            3 => mult_line(m_size),
+            3 => {
+                let mut str_block_buf = String::new();
+                print!("Block Size? ");
+                std::io::stdout().flush().unwrap();
+                std::io::stdin()
+                    .read_line(&mut str_block_buf)
+                    .expect("Failed to read from stdin");
+                let block_buf = str_block_buf.trim();
+                match block_buf.parse::<usize>() {
+                    Ok(block_size) => mult_block(m_size, block_size),
+                    Err(..) => println!("Invalid matrix size"),
+                }
+            }
             _ => println!("Invalid option!"),
         }
 
@@ -143,6 +156,46 @@ fn mult_line(m_size: usize) {
             for col in 0..m_size {
                 matrix_result[line * m_size + col] +=
                     matrix_left[line * m_size + iter] * matrix_right[iter * m_size + col]
+            }
+        }
+    }
+
+    let elapsed = now.elapsed();
+    println!("Time: {:3.3?}", elapsed);
+
+    for col in 0..(std::cmp::min(10, m_size)) {
+        print!("{} ", matrix_result[col])
+    }
+    println!("");
+}
+
+fn mult_block(m_size: usize, bk_size: usize) {
+    let matrix_left: Vec<f64> = vec![1.0; m_size * m_size];
+    let mut matrix_right: Vec<f64> = vec![0.0; m_size * m_size];
+    let mut matrix_result: Vec<f64> = vec![0.0; m_size * m_size];
+
+    for line in 0..m_size {
+        for col in 0..m_size {
+            matrix_right[line * m_size + col] = line as f64 + 1.0;
+        }
+    }
+
+    let now = Instant::now();
+
+    for line_block in (0..m_size).step_by(bk_size) {
+        for col_block in (0..m_size).step_by(bk_size) {
+            for iter_block in (0..m_size).step_by(bk_size) {
+                let upper_line: usize = cmp::min(line_block + bk_size, m_size);
+                let upper_col: usize = cmp::min(col_block + bk_size, m_size);
+                let upper_iter: usize = cmp::min(iter_block + bk_size, m_size);
+                for line in line_block..upper_line {
+                    for iter in iter_block..upper_iter {
+                        for col in col_block..upper_col {
+                            matrix_result[line * m_size + col] += matrix_left[line * m_size + iter]
+                                * matrix_right[iter * m_size + col]
+                        }
+                    }
+                }
             }
         }
     }
