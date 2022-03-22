@@ -123,7 +123,73 @@ void multLine(int matrixSize)
 }
 
 // add code here for block x block matriz multiplication
-void multBlock(int matrixSize, int bkSize) {}
+void multBlock(int matrixSize, int bkSize)
+{
+    SYSTEMTIME time1, time2;
+
+    char st[100];
+    double temp;
+    int i, j, k;
+
+    double *leftMatrix, *rightMatrix, *resultMatrix;
+
+    leftMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    rightMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    resultMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    memset(resultMatrix, 0, (matrixSize * matrixSize) * sizeof(double));
+
+    for (i = 0; i < matrixSize; i++)
+        for (j = 0; j < matrixSize; j++)
+            leftMatrix[i * matrixSize + j] = (double)1.0;
+
+    for (i = 0; i < matrixSize; i++)
+        for (j = 0; j < matrixSize; j++)
+            rightMatrix[i * matrixSize + j] = (double)(i + 1);
+
+    time1 = clock();
+    int sum, iBlock, jBlock, kBlock;
+    // is slower apparently
+    for (iBlock = 0; iBlock < matrixSize; iBlock += bkSize)
+    {
+        for (jBlock = 0; jBlock < matrixSize; jBlock += bkSize)
+        {
+            for (kBlock = 0; kBlock < matrixSize; kBlock += bkSize)
+            {
+                int upperi = min(iBlock + bkSize, matrixSize);
+                int upperj = min(jBlock + bkSize, matrixSize);
+                int upperk = min(kBlock + bkSize, matrixSize);
+                for (i = iBlock; i < upperi; i++)
+                {
+                    for (k = kBlock; k < upperk; k++)
+                    {
+                        for (j = jBlock; j < upperj; j++)
+                        {
+                            resultMatrix[i * matrixSize + j] +=
+                                leftMatrix[i * matrixSize + k] * rightMatrix[k * matrixSize + j];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    time2 = clock();
+    sprintf(st, "Time: %3.3f seconds\n", (double)(time2 - time1) / CLOCKS_PER_SEC);
+    cout << st;
+
+    // display 10 elements of the result matrix tto verify correctness
+    cout << "Result matrix: " << endl;
+    for (i = 0; i < 10; i++)
+    {
+        for (j = 0; j < min(10, matrixSize); j++)
+            cout << resultMatrix[j] << " ";
+    }
+    cout << endl;
+
+    free(leftMatrix);
+    free(rightMatrix);
+    free(resultMatrix);
+}
 
 void handle_error(int retval)
 {
