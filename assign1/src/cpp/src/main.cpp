@@ -113,7 +113,67 @@ void multLine(int matrixSize) {
 }
 
 // add code here for block x block matriz multiplication
-void multBlock(int matrixSize, int bkSize) {}
+void multBlock(int matrixSize, int bkSize) {
+
+    SYSTEMTIME time1, time2;
+
+    char st[100];
+    double temp;
+    int i, j, k;
+
+    double* leftMatrix, * rightMatrix, * resultMatrix;
+
+    leftMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
+    rightMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
+    resultMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
+    memset(resultMatrix, 0, (matrixSize * matrixSize) * sizeof(double));
+
+    for (i = 0; i < matrixSize; i++)
+        for (j = 0; j < matrixSize; j++)
+            leftMatrix[i * matrixSize + j] = (double)1.0;
+
+    for (i = 0; i < matrixSize; i++)
+        for (j = 0; j < matrixSize; j++)
+            rightMatrix[i * matrixSize + j] = (double)(i + 1);
+
+    time1 = clock();
+    int sum, iBlock, jBlock, kBlock;
+    // is slower apparently
+    for (iBlock = 0; iBlock < matrixSize; iBlock += bkSize) {
+        for (jBlock = 0; jBlock < matrixSize; jBlock += bkSize) {
+            for (kBlock = 0; kBlock < matrixSize; kBlock += bkSize) {
+                for (i = iBlock; i < min(iBlock + bkSize, matrixSize); i++) {
+                    for (j = jBlock; j < min(jBlock + bkSize, matrixSize); j++) {
+                        sum = 0;
+
+                        for (k = kBlock; k < min(kBlock + bkSize, matrixSize); k++) {
+                            sum +=
+                                leftMatrix[i * matrixSize + k] * rightMatrix[k * matrixSize + j];
+                        }
+
+                        resultMatrix[i * matrixSize + j] += sum;
+                    }
+                }
+            }
+        }
+    }
+
+    time2 = clock();
+    sprintf(st, "Time: %3.3f seconds\n", (double)(time2 - time1) / CLOCKS_PER_SEC);
+    cout << st;
+
+    // display 10 elements of the result matrix tto verify correctness
+    cout << "Result matrix: " << endl;
+    for (i = 0; i < 10; i++) {
+        for (j = 0; j < min(10, matrixSize); j++)
+            cout << resultMatrix[j] << " ";
+    }
+    cout << endl;
+
+    free(leftMatrix);
+    free(rightMatrix);
+    free(resultMatrix);
+}
 
 void handle_error(int retval) {
     printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
