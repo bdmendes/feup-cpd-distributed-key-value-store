@@ -10,7 +10,8 @@ using namespace std;
 
 #define SYSTEMTIME clock_t
 
-void mult(int matrixSize) {
+void mult(int matrixSize)
+{
 
     SYSTEMTIME time1, time2;
 
@@ -18,11 +19,11 @@ void mult(int matrixSize) {
     double temp;
     int i, j, k;
 
-    double* leftMatrix, * rightMatrix, * resultMatrix;
+    double *leftMatrix, *rightMatrix, *resultMatrix;
 
-    leftMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
-    rightMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
-    resultMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
+    leftMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    rightMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    resultMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
 
     for (i = 0; i < matrixSize; i++)
         for (j = 0; j < matrixSize; j++)
@@ -34,10 +35,13 @@ void mult(int matrixSize) {
 
     time1 = clock();
 
-    for (i = 0; i < matrixSize; i++) {
-        for (j = 0; j < matrixSize; j++) {
+    for (i = 0; i < matrixSize; i++)
+    {
+        for (j = 0; j < matrixSize; j++)
+        {
             temp = 0;
-            for (k = 0; k < matrixSize; k++) {
+            for (k = 0; k < matrixSize; k++)
+            {
                 temp += leftMatrix[i * matrixSize + k] * rightMatrix[k * matrixSize + j];
             }
             resultMatrix[i * matrixSize + j] = temp;
@@ -50,7 +54,8 @@ void mult(int matrixSize) {
 
     // display 10 elements of the result matrix tto verify correctness
     cout << "Result matrix: " << endl;
-    for (i = 0; i < 1; i++) {
+    for (i = 0; i < 1; i++)
+    {
         for (j = 0; j < min(10, matrixSize); j++)
             cout << resultMatrix[j] << " ";
     }
@@ -62,7 +67,8 @@ void mult(int matrixSize) {
 }
 
 // add code here for matrixSizee x matrixSizee matriz multiplication
-void multLine(int matrixSize) {
+void multLine(int matrixSize)
+{
 
     SYSTEMTIME time1, time2;
 
@@ -70,11 +76,11 @@ void multLine(int matrixSize) {
     double temp;
     int i, j, k;
 
-    double* leftMatrix, * rightMatrix, * resultMatrix;
+    double *leftMatrix, *rightMatrix, *resultMatrix;
 
-    leftMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
-    rightMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
-    resultMatrix = (double*)malloc((matrixSize * matrixSize) * sizeof(double));
+    leftMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    rightMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
+    resultMatrix = (double *)malloc((matrixSize * matrixSize) * sizeof(double));
     memset(resultMatrix, 0, (matrixSize * matrixSize) * sizeof(double));
 
     for (i = 0; i < matrixSize; i++)
@@ -87,9 +93,12 @@ void multLine(int matrixSize) {
 
     time1 = clock();
 
-    for (i = 0; i < matrixSize; i++) {
-        for (k = 0; k < matrixSize; k++) {
-            for (j = 0; j < matrixSize; j++) {
+    for (i = 0; i < matrixSize; i++)
+    {
+        for (k = 0; k < matrixSize; k++)
+        {
+            for (j = 0; j < matrixSize; j++)
+            {
                 resultMatrix[i * matrixSize + j] += leftMatrix[i * matrixSize + k] * rightMatrix[k * matrixSize + j]; // leftMatrix[i][k] * rightMatrix[k][j]
             }
         }
@@ -101,7 +110,8 @@ void multLine(int matrixSize) {
 
     // display 10 elements of the result matrix tto verify correctness
     cout << "Result matrix: " << endl;
-    for (i = 0; i < 10; i++) {
+    for (i = 0; i < 10; i++)
+    {
         for (j = 0; j < min(10, matrixSize); j++)
             cout << resultMatrix[j] << " ";
     }
@@ -115,14 +125,17 @@ void multLine(int matrixSize) {
 // add code here for block x block matriz multiplication
 void multBlock(int matrixSize, int bkSize) {}
 
-void handle_error(int retval) {
+void handle_error(int retval)
+{
     printf("PAPI error %d: %s\n", retval, PAPI_strerror(retval));
     exit(1);
 }
 
-void init_papi() {
+void init_papi()
+{
     int retval = PAPI_library_init(PAPI_VER_CURRENT);
-    if (retval != PAPI_VER_CURRENT && retval < 0) {
+    if (retval != PAPI_VER_CURRENT && retval < 0)
+    {
         printf("PAPI library version mismatch!\n");
         exit(1);
     }
@@ -130,11 +143,12 @@ void init_papi() {
         handle_error(retval);
 
     std::cout << "PAPI Version Number: MAJOR: " << PAPI_VERSION_MAJOR(retval)
-        << " MINOR: " << PAPI_VERSION_MINOR(retval)
-        << " REVISION: " << PAPI_VERSION_REVISION(retval) << "\n";
+              << " MINOR: " << PAPI_VERSION_MINOR(retval)
+              << " REVISION: " << PAPI_VERSION_REVISION(retval) << "\n";
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
 
     char c;
     int matrixSize, blockSize;
@@ -161,9 +175,11 @@ int main(int argc, char* argv[]) {
         cout << "ERROR: PAPI_L2_DCM" << endl;
 
     op = 1;
-    do {
+    do
+    {
         cout << endl
-            << "1. Multiplication" << endl;
+             << "0. Exit" << endl
+             << "1. Multiplication" << endl;
         cout << "2. Line Multiplication" << endl;
         cout << "3. Block Multiplication" << endl;
         cout << "Selection?: ";
@@ -178,7 +194,8 @@ int main(int argc, char* argv[]) {
         if (ret != PAPI_OK)
             cout << "ERROR: Start PAPI" << endl;
 
-        switch (op) {
+        switch (op)
+        {
         case 1:
             mult(matrixSize);
             break;
