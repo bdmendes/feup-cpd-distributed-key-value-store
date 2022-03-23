@@ -12,7 +12,6 @@ using namespace std;
 
 void mult(int matrixSize)
 {
-
     SYSTEMTIME time1, time2;
 
     char st[100];
@@ -66,10 +65,8 @@ void mult(int matrixSize)
     free(resultMatrix);
 }
 
-// add code here for matrixSizee x matrixSizee matriz multiplication
 void multLine(int matrixSize)
 {
-
     SYSTEMTIME time1, time2;
 
     char st[100];
@@ -99,7 +96,7 @@ void multLine(int matrixSize)
         {
             for (j = 0; j < matrixSize; j++)
             {
-                resultMatrix[i * matrixSize + j] += leftMatrix[i * matrixSize + k] * rightMatrix[k * matrixSize + j]; // leftMatrix[i][k] * rightMatrix[k][j]
+                resultMatrix[i * matrixSize + j] += leftMatrix[i * matrixSize + k] * rightMatrix[k * matrixSize + j];
             }
         }
     }
@@ -122,10 +119,8 @@ void multLine(int matrixSize)
     free(resultMatrix);
 }
 
-// add code here for block x block matriz multiplication
 void multBlock(int matrixSize, int bkSize)
 {
-
     SYSTEMTIME time1, time2;
 
     char st[100];
@@ -149,7 +144,6 @@ void multBlock(int matrixSize, int bkSize)
 
     time1 = clock();
     int sum, iBlock, jBlock, kBlock;
-    // is slower apparently
     for (iBlock = 0; iBlock < matrixSize; iBlock += bkSize)
     {
         for (jBlock = 0; jBlock < matrixSize; jBlock += bkSize)
@@ -245,6 +239,7 @@ int main(int argc, char *argv[])
     do
     {
         cout << endl
+             << "0. Exit" << endl
              << "1. Multiplication" << endl;
         cout << "2. Line Multiplication" << endl;
         cout << "3. Block Multiplication" << endl;
