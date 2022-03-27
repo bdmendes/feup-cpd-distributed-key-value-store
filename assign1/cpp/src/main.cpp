@@ -396,6 +396,18 @@ int main(int argc, char *argv[])
     if (ret != PAPI_OK)
         std::cout << "FAIL remove event" << std::endl;
 
+    ret = PAPI_remove_event(eventSet, PAPI_L3_TCM);
+    if (ret != PAPI_OK)
+        std::cout << "FAIL remove event" << std::endl;
+
+    ret = PAPI_remove_event(eventSet, PAPI_L3_TCA);
+    if (ret != PAPI_OK)
+        std::cout << "FAIL remove event" << std::endl;
+
+    ret = PAPI_remove_event(eventSet, PAPI_TOT_INS);
+    if (ret != PAPI_OK)
+        std::cout << "FAIL remove event" << std::endl;
+
     ret = PAPI_destroy_eventset(&eventSet);
     if (ret != PAPI_OK)
         std::cout << "FAIL destroy" << std::endl;
