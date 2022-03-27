@@ -220,7 +220,7 @@ int runTests(int algChoice, int eventSet)
     {
         file << "BLOCK SIZE,";
     }
-    file << "MATRIX SIZE,L1 DCM,L2 DCM,L3 TCM,L3 TCA,L3 PCNTG,TOT INS,ELAPSED\n";
+    file << "MATRIX SIZE,L1 DCM,L2 DCM,L3 TCM,L3 TCA,TOT INS,ELAPSED\n";
 
     while (!matrixSizes.empty())
     {
@@ -267,7 +267,6 @@ int runTests(int algChoice, int eventSet)
                  << ',' << values[1]
                  << ',' << values[2]
                  << ',' << values[3]
-                 << ',' << (double)values[2] / values[3]
                  << ',' << values[4]
                  << ',' << elapsed << '\n';
             file.flush();
