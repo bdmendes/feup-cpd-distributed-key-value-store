@@ -1,3 +1,5 @@
+package server;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -37,7 +39,11 @@ public class StorageService {
         return this.id;
     }
 
-    private String getValueFilePath(String key){
-        return "./node_storage/storage" + id + "/" + key;
+    public String getValueFilePath(String key){
+        return getValueFilesDirectory() + "/" + key;
+    }
+
+    public String getValueFilesDirectory(){
+        return "./node_storage/storage" + id;
     }
 }

@@ -1,3 +1,5 @@
+package server;
+
 import java.io.IOException;
 
 public class Store {
@@ -8,6 +10,7 @@ public class Store {
         storageService.put("key2", new byte[]{67, 67, 69});
         storageService.put("key3", test);
 
-        System.out.println("Hello, World!");
+        var str = "ola";
+        System.out.println(MembershipService.sha256(str));
     }
 }
