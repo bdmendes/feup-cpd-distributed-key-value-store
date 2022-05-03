@@ -6,22 +6,23 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
+import static message.MessageConstants.END_OF_LINE;
+
 public abstract class Message {
-    private static final String endOfLine = new String(new byte[]{0xD, 0xA});
 
     protected static byte[] encodeWithFields(MessageType type, Map<String, String> fields, byte[] data) {
         StringBuilder builder = new StringBuilder();
-        builder.append(type.toString()).append(endOfLine);
+        builder.append(type.toString()).append(END_OF_LINE);
         for (Map.Entry<String, String> field : fields.entrySet()) {
-            builder.append(field.getKey()).append(" ").append(field.getValue()).append(endOfLine);
+            builder.append(field.getKey()).append(" ").append(field.getValue()).append(END_OF_LINE);
         }
-        builder.append(endOfLine);
+        builder.append(END_OF_LINE);
         builder.append(new String(data));
         return builder.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     protected static Map<String, String> decodeFields(String message) {
-        String[] lines = message.split(endOfLine);
+        String[] lines = message.split(END_OF_LINE);
         HashMap<String, String> fields = new HashMap<>();
         for (int i = 1; i < lines.length; i++) {
             if (lines[i].isEmpty()) return fields;
@@ -32,15 +33,17 @@ public abstract class Message {
     }
 
     protected static byte[] decodeBody(String message) {
-        int start = message.indexOf(endOfLine + endOfLine);
+        int start = message.indexOf(END_OF_LINE + END_OF_LINE);
 
         if (start == -1) {
             return new byte[0];
         }
 
-        String body = message.substring(start + endOfLine.length() * 2);
+        String body = message.substring(start + END_OF_LINE.length() * 2);
         return body.getBytes(StandardCharsets.UTF_8);
     }
+
+    public abstract byte[] encode();
 
     public abstract void accept(MessageVisitor visitor);
 }

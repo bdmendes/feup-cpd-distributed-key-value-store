@@ -3,12 +3,16 @@ package client;
 import message.Message;
 import message.PutMessage;
 
+import java.io.OutputStream;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
+
 public class TestClient {
     private static void printUsage() {
         System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
     }
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws java.io.IOException {
         if (args.length < 2) {
             printUsage();
             System.exit(1);
@@ -32,6 +36,12 @@ public class TestClient {
 
         // assume put for now
         // send tcp message
-        Message msg = PutMessage()
+        String value = "bdmendes";
+        byte[] arr = value.getBytes(StandardCharsets.UTF_8);
+        Message msg = new PutMessage("ola", arr);
+        try(Socket socket = new Socket("127.0.0.1", 9000)) {
+            OutputStream output = socket.getOutputStream();
+            output.write(msg.encode());
+        };
     }
 }

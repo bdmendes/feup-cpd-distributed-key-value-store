@@ -27,7 +27,7 @@ public class PutMessage extends Message {
         return value;
     }
 
-    protected byte[] encode(String key, byte[] value) {
+    public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
         fields.put("key", key);
         return Message.encodeWithFields(MessageType.PUT, fields, value);

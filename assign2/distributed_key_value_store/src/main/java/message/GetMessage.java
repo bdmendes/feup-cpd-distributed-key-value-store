@@ -6,7 +6,8 @@ public class GetMessage extends Message {
     public GetMessage(String message) {
     }
 
-    protected byte[] encode(String[] fields, byte[] body) {
+    @Override
+    public byte[] encode() {
         return new byte[0];
     }
 

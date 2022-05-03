@@ -1,6 +1,14 @@
 package server;
 
-import java.io.IOException;
+import message.Message;
+import message.PutMessage;
+
+import javax.xml.crypto.Data;
+import java.io.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+
+import static message.MessageConstants.END_OF_LINE;
 
 public class Store {
     public static void main(String[] args) throws IOException {
@@ -21,7 +29,26 @@ public class Store {
             System.exit(1);
             return;
         }
-        Node node = new Node(nodeId, storePort);
+        Node node = new Node(nodeId, 9000);
         StorageService storageService = new StorageService(node);
+        MembershipService membershipService = new MembershipService(storageService);
+
+        try (ServerSocket serverSocket = new ServerSocket(9000)) {
+            System.out.println("Store server is running on port " + 9000);
+
+            System.out.println("Got connection from client");
+            Socket clientSocket = serverSocket.accept();
+            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            DataInputStream inData = new DataInputStream(clientSocket.getInputStream());
+            StringBuilder msg = new StringBuilder();
+            for(;;) {
+                String line = in.readLine();
+                if (line == null) break;
+                else msg.append(line + END_OF_LINE);
+            }
+            System.out.println("Received message: " + msg);
+            Message message = new PutMessage(msg.toString());
+            membershipService.process(message);
+        }
     }
 }

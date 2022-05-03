@@ -7,7 +7,8 @@ public class LeaveMessage extends Message {
 
     }
 
-    protected byte[] encode(String[] fields, byte[] body) {
+    @Override
+    public byte[] encode() {
         return new byte[0];
     }
 

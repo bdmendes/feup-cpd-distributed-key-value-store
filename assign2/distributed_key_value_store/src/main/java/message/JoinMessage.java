@@ -6,7 +6,8 @@ public class JoinMessage extends Message {
     public JoinMessage(String message) {
     }
 
-    protected byte[] encode(String[] fields, byte[] body) {
+    @Override
+    public byte[] encode() {
         return new byte[0];
     }
 
