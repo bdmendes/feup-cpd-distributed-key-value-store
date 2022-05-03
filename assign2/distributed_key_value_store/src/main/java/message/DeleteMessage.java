@@ -1,6 +1,6 @@
 package message;
 
-public class MembershipMessage extends Message {
+public class DeleteMessage extends Message{
     @Override
     protected byte[] encode(String[] fields, byte[] body) {
         return new byte[0];
