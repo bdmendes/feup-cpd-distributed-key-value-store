@@ -1,7 +1,8 @@
 package message;
 
+import server.MessageVisitor;
+
 public class LeaveMessage extends Message{
-    @Override
     protected byte[] encode(String[] fields, byte[] body) {
         return new byte[0];
     }
@@ -9,5 +10,10 @@ public class LeaveMessage extends Message{
     @Override
     protected void decode(String message) {
 
+    }
+
+    @Override
+    public void accept(MessageVisitor visitor) {
+        visitor.processLeave(this);
     }
 }
