@@ -5,13 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class StorageService {
-    private final int port;
-    private final int id;
+    private final Node node;
 
-    public StorageService(int id, int port) throws IOException {
-        this.port = port;
-        this.id = id;
-        Files.createDirectories(Paths.get("./node_storage/storage" + id));
+    public StorageService(Node node) throws IOException {
+        this.node = node;
+        Files.createDirectories(Paths.get(getValueFilesDirectory()));
     }
 
     public void put(String key, byte[] value) throws IOException {
@@ -31,12 +29,8 @@ public class StorageService {
         return file.delete();
     }
 
-    public int getPort() {
-        return this.port;
-    }
-
-    public int getId() {
-        return this.id;
+    public Node getNode() {
+        return this.node;
     }
 
     public String getValueFilePath(String key){
@@ -44,6 +38,6 @@ public class StorageService {
     }
 
     public String getValueFilesDirectory(){
-        return "./node_storage/storage" + id;
+        return "./node_storage/storage" + node + "/hash_table";
     }
 }

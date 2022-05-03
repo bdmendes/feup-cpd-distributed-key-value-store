@@ -1,14 +1,4 @@
 package message;
-
-enum MessageType {
-    PUT,
-    GET,
-    DELETE,
-    JOIN,
-    LEAVE,
-    MEMBERSHIP
-}
-
 public abstract class Message {
     protected MessageType messageType;
 

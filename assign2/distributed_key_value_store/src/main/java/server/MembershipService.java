@@ -5,6 +5,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class MembershipService {
+    private int membershipCounter = 0;
+    private final StorageService storageService;
+
     static String sha256(String str) {
         try {
             MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
@@ -18,5 +21,25 @@ public class MembershipService {
         } catch (NoSuchAlgorithmException e) {
             return str;
         }
+    }
+
+    public MembershipService(StorageService storageService) {
+        this.storageService = storageService;
+    }
+
+    private void sendMembershipStatus() {
+        //
+    }
+
+    private void joinCluster(){
+
+    }
+
+    private void leaveCluster() {
+
+    }
+
+    public int getMembershipCounter() {
+        return membershipCounter;
     }
 }
