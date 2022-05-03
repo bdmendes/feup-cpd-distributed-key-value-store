@@ -3,7 +3,6 @@ plugins {
 }
 
 group 'com.fe.up.pt.g6'
-version '1.0-SNAPSHOT'
 
 repositories {
     mavenCentral()
