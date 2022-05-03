@@ -2,14 +2,13 @@ package message;
 
 import server.MessageVisitor;
 
-public class LeaveMessage extends Message{
-    protected byte[] encode(String[] fields, byte[] body) {
-        return new byte[0];
+public class LeaveMessage extends Message {
+    public LeaveMessage(String message) {
+
     }
 
-    @Override
-    protected void decode(String message) {
-
+    protected byte[] encode(String[] fields, byte[] body) {
+        return new byte[0];
     }
 
     @Override

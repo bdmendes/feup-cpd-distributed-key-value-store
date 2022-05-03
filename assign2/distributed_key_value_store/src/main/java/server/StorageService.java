@@ -1,6 +1,9 @@
 package server;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
@@ -24,7 +27,7 @@ public class StorageService {
         }
     }
 
-    public boolean delete(String key){
+    public boolean delete(String key) {
         File file = new File(getValueFilePath(key));
         return file.delete();
     }
@@ -33,11 +36,11 @@ public class StorageService {
         return this.node;
     }
 
-    public String getValueFilePath(String key){
+    public String getValueFilePath(String key) {
         return getValueFilesDirectory() + "/" + key;
     }
 
-    public String getValueFilesDirectory(){
+    public String getValueFilesDirectory() {
         return "./node_storage/storage" + node + "/hash_table";
     }
 }

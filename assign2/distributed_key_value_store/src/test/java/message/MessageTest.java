@@ -15,9 +15,10 @@ class MessageTest {
         fields.put("fruit", "beans");
         fields.put("key", "hey");
         byte[] data = new byte[]{(byte)'c', (byte)'d'};
+
         byte[] result = Message.encodeWithFields(MessageType.DELETE, fields, data);
         String stringResult = new String(result);
-        System.out.println(stringResult);
+
         assertEquals("DELETE" + endOfLine + "fruit beans" + endOfLine + "key hey" + endOfLine + endOfLine + "cd", stringResult);
     }
 
@@ -36,6 +37,7 @@ class MessageTest {
         String message = "DELETE" + endOfLine + "fruit beans" + endOfLine + "key hey" + endOfLine + endOfLine + "cd";
 
         var fields = Message.decodeFields(message);
+
         assertEquals(fields.size(), 2);
         assertTrue(fields.containsKey("fruit"));
         assertEquals(fields.get("fruit"), "beans");

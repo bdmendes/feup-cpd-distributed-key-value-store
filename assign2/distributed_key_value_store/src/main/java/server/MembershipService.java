@@ -2,13 +2,18 @@ package server;
 
 import message.*;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class MembershipService implements MessageVisitor {
-    private int membershipCounter = 0;
     private final StorageService storageService;
+    private final int membershipCounter = 0;
+
+    public MembershipService(StorageService storageService) {
+        this.storageService = storageService;
+    }
 
     static String sha256(String str) {
         try {
@@ -25,15 +30,11 @@ public class MembershipService implements MessageVisitor {
         }
     }
 
-    public MembershipService(StorageService storageService) {
-        this.storageService = storageService;
-    }
-
     private void sendMembershipStatus() {
         //
     }
 
-    private void joinCluster(){
+    private void joinCluster() {
 
     }
 
@@ -47,7 +48,12 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processPut(PutMessage putMessage) {
-
+        try {
+            storageService.put(putMessage.getKey(), putMessage.getValue());
+        } catch (IOException e) {
+            // TODO: error handling
+            e.printStackTrace();
+        }
     }
 
     @Override

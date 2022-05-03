@@ -2,14 +2,13 @@ package message;
 
 import server.MessageVisitor;
 
-public class DeleteMessage extends Message{
-    protected byte[] encode(String[] fields, byte[] body) {
-        return new byte[0];
+public class DeleteMessage extends Message {
+    public DeleteMessage(String message) {
+
     }
 
-    @Override
-    protected void decode(String message) {
-
+    protected byte[] encode(String[] fields, byte[] body) {
+        return new byte[0];
     }
 
     @Override

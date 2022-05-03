@@ -2,18 +2,28 @@ package message;
 
 import server.MessageVisitor;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
-public class PutMessage extends Message{
-    private String key;
-    private String value;
+public class PutMessage extends Message {
+    private final String key;
+    private final byte[] value;
+
+    public PutMessage(String key, byte[] value) {
+        this.key = key;
+        this.value = value;
+    }
+
+    public PutMessage(String message) {
+        var fields = decodeFields(message);
+        this.value = decodeBody(message);
+        this.key = fields.get("key");
+    }
 
     public String getKey() {
         return key;
     }
 
-    public String getValue() {
+    public byte[] getValue() {
         return value;
     }
 
@@ -21,14 +31,6 @@ public class PutMessage extends Message{
         HashMap<String, String> fields = new HashMap<>();
         fields.put("key", key);
         return Message.encodeWithFields(MessageType.PUT, fields, value);
-    }
-
-    @Override
-    protected void decode(String message) {
-        var fields = decodeFields(message);
-        var body = decodeBody(message);
-        this.value = new String(body, StandardCharsets.UTF_8);
-        this.key = fields.get("key");
     }
 
     @Override
