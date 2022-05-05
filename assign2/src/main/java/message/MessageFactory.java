@@ -6,18 +6,17 @@ public class MessageFactory {
         return data.substring(0, data.indexOf(0xDA));
     }
 
-    public static Message createMessage(byte[] message) {
-        String stringMessage = new String(message);
-        String firstLine = readLine(stringMessage);
+    public static Message createMessage(String headers, byte[] body) {
+        String firstLine = readLine(headers);
         MessageType type = MessageType.valueOf(firstLine);
 
         return switch (type) {
-            case PUT -> new PutMessage(stringMessage);
-            case GET -> new GetMessage(stringMessage);
-            case DELETE -> new DeleteMessage(stringMessage);
-            case JOIN -> new JoinMessage(stringMessage);
-            case LEAVE -> new LeaveMessage(stringMessage);
-            case MEMBERSHIP -> new MembershipMessage(stringMessage);
+            case PUT -> new PutMessage(headers, body);
+            case GET -> new GetMessage(headers, body);
+            case DELETE -> new DeleteMessage(headers, body);
+            case JOIN -> new JoinMessage(headers, body);
+            case LEAVE -> new LeaveMessage(headers, body);
+            case MEMBERSHIP -> new MembershipMessage(headers, body);
         };
     }
 }

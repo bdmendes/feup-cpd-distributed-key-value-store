@@ -3,7 +3,7 @@ package message;
 import server.MessageVisitor;
 
 public class MembershipMessage extends Message {
-    public MembershipMessage(String message) {
+    public MembershipMessage(String headers, byte[] data) {
 
     }
 

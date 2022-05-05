@@ -3,7 +3,7 @@ package message;
 import server.MessageVisitor;
 
 public class DeleteMessage extends Message {
-    public DeleteMessage(String message) {
+    public DeleteMessage(String headers, byte[] data) {
 
     }
 

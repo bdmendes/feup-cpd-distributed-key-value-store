@@ -3,7 +3,7 @@ package message;
 import server.MessageVisitor;
 
 public class GetMessage extends Message {
-    public GetMessage(String message) {
+    public GetMessage(String headers, byte[] data) {
     }
 
     @Override

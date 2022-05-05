@@ -3,20 +3,27 @@ package message;
 import server.MessageVisitor;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class PutMessage extends Message {
-    private final String key;
-    private final byte[] value;
+    private String key;
+    private byte[] value;
 
-    public PutMessage(String key, byte[] value) {
-        this.key = key;
-        this.value = value;
+    public PutMessage() {
     }
 
-    public PutMessage(String message) {
-        var fields = decodeFields(message);
-        this.value = decodeBody(message);
-        this.key = fields.get("key");
+    public PutMessage(String headers, byte[] data) {
+        Map<String, String> fields = Message.decodeFields(headers);
+        key = fields.get("key");
+        value = data;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
+    }
+
+    public void setValue(byte[] value) {
+        this.value = value;
     }
 
     public String getKey() {
@@ -27,6 +34,7 @@ public class PutMessage extends Message {
         return value;
     }
 
+    @Override
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
         fields.put("key", key);

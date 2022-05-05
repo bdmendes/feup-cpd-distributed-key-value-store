@@ -3,7 +3,7 @@ package message;
 import server.MessageVisitor;
 
 public class LeaveMessage extends Message {
-    public LeaveMessage(String message) {
+    public LeaveMessage(String headers, byte[] data) {
 
     }
 
