@@ -1,6 +1,7 @@
 package client;
 
 import message.Message;
+import message.MessageConstants;
 import message.PutMessage;
 
 import java.io.OutputStream;
@@ -36,9 +37,11 @@ public class TestClient {
 
         // assume put for now
         // send tcp message
-        String value = "bdmendes";
+        String value = "bdmendes\nCool Stuff!!" + MessageConstants.END_OF_LINE + "Beans everywhere!";
         byte[] arr = value.getBytes(StandardCharsets.UTF_8);
-        Message msg = new PutMessage("ola", arr);
+        PutMessage msg = new PutMessage();
+        msg.setKey("key34");
+        msg.setValue(arr);
         try(Socket socket = new Socket("127.0.0.1", 9000)) {
             OutputStream output = socket.getOutputStream();
             output.write(msg.encode());

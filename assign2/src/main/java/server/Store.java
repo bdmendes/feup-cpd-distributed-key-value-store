@@ -1,7 +1,9 @@
 package server;
 
 import message.Message;
+import message.MessageFactory;
 import message.PutMessage;
+import server.messagereader.MessageReader;
 
 import javax.xml.crypto.Data;
 import java.io.*;
@@ -39,20 +41,15 @@ public class Store {
             System.out.println("Got connection from client");
             Socket clientSocket = serverSocket.accept();
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-            DataInputStream inData = new DataInputStream(new BufferedInputStream(clientSocket.getInputStream()));
-            StringBuilder msg = new StringBuilder();
-            for(;;) {
-                String line = in.readLine();
-                if (line == null) break;
-                else msg.append(line + END_OF_LINE);
+
+            MessageReader messageReader = new MessageReader();
+
+            while(!messageReader.isComplete()) {
+                messageReader.read(in);
             }
-            System.out.println("Received message: " + msg);
-            //Message message = new PutMessage(msg.toString());
-            byte[] data = new byte[100];
-            int s = inData.read(data);
-            System.out.println("Received data: " + s);
-            System.out.println("Received data: " + new String(data));
-            //membershipService.process(message);
+
+            Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
+            membershipService.process(message);
         }
     }
 }

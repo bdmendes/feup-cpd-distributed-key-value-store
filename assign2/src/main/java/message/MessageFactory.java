@@ -3,7 +3,7 @@ package message;
 
 public class MessageFactory {
     private static String readLine(String data) {
-        return data.substring(0, data.indexOf(0xDA));
+        return data.substring(0, data.indexOf(0x0D));
     }
 
     public static Message createMessage(String headers, byte[] body) {
