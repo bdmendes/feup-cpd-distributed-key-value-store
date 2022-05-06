@@ -2,16 +2,11 @@ package server;
 
 import message.Message;
 import message.MessageFactory;
-import message.PutMessage;
-import server.messagereader.MessageReader;
+import message.messagereader.MessageReader;
 
-import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.util.Arrays;
-
-import static message.MessageConstants.END_OF_LINE;
 
 public class Store {
     public static void main(String[] args) throws IOException {
@@ -52,7 +47,7 @@ public class Store {
             }
 
             Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-            membershipService.process(message);
+            membershipService.process(message, clientSocket);
         }
     }
 }

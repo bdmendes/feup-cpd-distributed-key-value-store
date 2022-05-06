@@ -1,4 +1,4 @@
-package server.messagereader;
+package message.messagereader;
 
 import message.MessageConstants;
 

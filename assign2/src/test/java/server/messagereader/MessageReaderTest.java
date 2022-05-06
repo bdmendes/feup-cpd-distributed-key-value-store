@@ -1,6 +1,7 @@
 package server.messagereader;
 
 import message.MessageConstants;
+import message.messagereader.MessageReader;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 

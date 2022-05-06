@@ -1,5 +1,7 @@
 package message;
 
+import java.net.Socket;
+
 public class LeaveMessage extends Message {
     public LeaveMessage(String headers, byte[] data) {
 
@@ -11,7 +13,7 @@ public class LeaveMessage extends Message {
     }
 
     @Override
-    public void accept(MessageVisitor visitor) {
-        visitor.processLeave(this);
+    public void accept(MessageVisitor visitor, Socket socket) {
+        visitor.processLeave(this, socket);
     }
 }

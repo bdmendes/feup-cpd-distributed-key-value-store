@@ -3,6 +3,8 @@ package server;
 import message.*;
 
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class MembershipService implements MessageVisitor {
@@ -30,7 +32,7 @@ public class MembershipService implements MessageVisitor {
     }
 
     @Override
-    public void processPut(PutMessage putMessage) {
+    public void processPut(PutMessage putMessage, Socket socket) {
         // FIND NODE TO STORE KEY/VALUE PAIR
 
         // - THEN STORE KEY/VALUE PAIR:
@@ -43,16 +45,20 @@ public class MembershipService implements MessageVisitor {
     }
 
     @Override
-    public void processGet(GetMessage getMessage) {
+    public void processGet(GetMessage getMessage, Socket socket) {
         // FIND NODE TO STORE KEY/VALUE PAIR
 
         // - THEN GET KEY/VALUE PAIR:
         try {
             byte[] value = storageService.get(getMessage.getKey());
 
-            // TODO: use remote object to send value to client
-            // for now, just print it to console
-            System.out.println(new String(value, StandardCharsets.UTF_8));
+            GetReply response = new GetReply();
+            response.setValue(value);
+            response.setStatusCode(StatusCode.OK);
+            response.setKey(getMessage.getKey());
+
+            OutputStream outputStream = socket.getOutputStream();
+            outputStream.write(response.encode());
         } catch (IOException e) {
             // TODO: error handling
             throw new RuntimeException("Could not get key/value pair");
@@ -60,7 +66,7 @@ public class MembershipService implements MessageVisitor {
     }
 
     @Override
-    public void processDelete(DeleteMessage deleteMessage) {
+    public void processDelete(DeleteMessage deleteMessage, Socket socket) {
         // FIND NODE TO DELETE KEY/VALUE PAIR
 
         // - THEN DELETE KEY/VALUE PAIR:
@@ -73,22 +79,30 @@ public class MembershipService implements MessageVisitor {
     }
 
     @Override
-    public void processMembership(MembershipMessage membershipMessage) {
+    public void processMembership(MembershipMessage membershipMessage, Socket socket) {
 
     }
 
     @Override
-    public void processJoin(JoinMessage joinMessage) {
+    public void processJoin(JoinMessage joinMessage, Socket socket) {
 
     }
 
     @Override
-    public void processLeave(LeaveMessage leaveMessage) {
+    public void processLeave(LeaveMessage leaveMessage, Socket socket) {
 
     }
 
     @Override
-    public void process(Message message) {
-        message.accept(this);
+    public void processGetReply(GetReply getReply, Socket socket) throws IOException {
+        // propagate
+
+        OutputStream outputStream = socket.getOutputStream();
+        outputStream.write(getReply.encode());
+    }
+
+    @Override
+    public void process(Message message, Socket socket) throws IOException {
+        message.accept(this, socket);
     }
 }

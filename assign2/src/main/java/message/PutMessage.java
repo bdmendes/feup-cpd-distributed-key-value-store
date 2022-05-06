@@ -1,5 +1,6 @@
 package message;
 
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,7 +12,7 @@ public class PutMessage extends Message {
     }
 
     public PutMessage(String headers, byte[] data) {
-        Map<String, String> fields = Message.decodeFields(headers);
+        Map<String, String> fields = decodeFields(headers);
         key = fields.get("key");
         value = data;
     }
@@ -36,11 +37,11 @@ public class PutMessage extends Message {
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
         fields.put("key", key);
-        return Message.encodeWithFields(MessageType.PUT, fields, value);
+        return encodeWithFields(MessageType.PUT, fields, value);
     }
 
     @Override
-    public void accept(MessageVisitor visitor) {
-        visitor.processPut(this);
+    public void accept(MessageVisitor visitor, Socket socket) {
+        visitor.processPut(this, socket);
     }
 }

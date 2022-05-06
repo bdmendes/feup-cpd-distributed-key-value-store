@@ -1,7 +1,6 @@
-package server.messagereader;
+package message.messagereader;
 
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;

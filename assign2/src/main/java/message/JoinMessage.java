@@ -1,5 +1,7 @@
 package message;
 
+import java.net.Socket;
+
 public class JoinMessage extends Message {
     public JoinMessage(String headers, byte[] data) {
     }
@@ -10,7 +12,7 @@ public class JoinMessage extends Message {
     }
 
     @Override
-    public void accept(MessageVisitor visitor) {
-        visitor.processJoin(this);
+    public void accept(MessageVisitor visitor, Socket socket) {
+        visitor.processJoin(this, socket);
     }
 }

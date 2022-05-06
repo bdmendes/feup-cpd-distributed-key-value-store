@@ -1,4 +1,4 @@
-package server.messagereader;
+package message.messagereader;
 
 import java.io.BufferedReader;
 import java.io.IOException;

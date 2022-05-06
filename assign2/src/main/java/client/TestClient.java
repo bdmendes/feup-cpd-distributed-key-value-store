@@ -1,11 +1,10 @@
 package client;
 
 import message.*;
+import message.messagereader.MessageReader;
 import utils.StoreUtils;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
@@ -148,6 +147,18 @@ public class TestClient {
             try(Socket socket = new Socket(nodeAccessPoint.getIp(), nodeAccessPoint.getPort())) {
                 OutputStream output = socket.getOutputStream();
                 output.write(msg.encode());
+
+                ClientVisitor visitor = new ClientVisitor();
+                BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
+                MessageReader messageReader = new MessageReader();
+
+                while(!messageReader.isComplete()) {
+                    messageReader.read(in);
+                }
+
+                Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
+                visitor.process(message, socket);
             } catch (UnknownHostException e) {
                 System.out.println("Unknown host");
                 System.exit(1);

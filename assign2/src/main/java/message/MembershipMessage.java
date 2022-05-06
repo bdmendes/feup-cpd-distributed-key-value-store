@@ -1,5 +1,7 @@
 package message;
 
+import java.net.Socket;
+
 public class MembershipMessage extends Message {
     public MembershipMessage(String headers, byte[] data) {
 
@@ -12,7 +14,7 @@ public class MembershipMessage extends Message {
     }
 
     @Override
-    public void accept(MessageVisitor visitor) {
-        visitor.processMembership(this);
+    public void accept(MessageVisitor visitor, Socket socket) {
+        visitor.processMembership(this, socket);
     }
 }

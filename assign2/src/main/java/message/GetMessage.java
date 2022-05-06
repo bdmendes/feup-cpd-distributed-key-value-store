@@ -1,13 +1,15 @@
 package message;
 
+import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 public class GetMessage extends Message {
     private String key;
 
     public GetMessage(String headers) {
-        Map<String, String> fields = Message.decodeFields(headers);
+        Map<String, String> fields = decodeFields(headers);
         key = fields.get("key");
     }
 
@@ -29,11 +31,11 @@ public class GetMessage extends Message {
         fields.put("key", key);
         byte[] body = new byte[0];
 
-        return Message.encodeWithFields(MessageType.GET, fields, body);
+        return encodeWithFields(MessageType.GET, fields, body);
     }
 
     @Override
-    public void accept(MessageVisitor visitor) {
-        visitor.processGet(this);
+    public void accept(MessageVisitor visitor, Socket socket) {
+        visitor.processGet(this, socket);
     }
 }
