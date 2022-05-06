@@ -1,7 +1,5 @@
 package message;
 
-import server.MessageVisitor;
-
 import java.util.HashMap;
 import java.util.Map;
 

@@ -1,20 +1,19 @@
-package utils;
+package client;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class IPAddress {
+public class RMIAddress extends IPAddress{
     private final String ip;
     private final String objectName;
 
-    public IPAddress(String ip, String objectName) {
+    public RMIAddress(String ip, String objectName) {
         this.ip = ip;
         this.objectName = objectName;
     }
 
-    public IPAddress(String address) {
-        Pattern pattern = Pattern.compile("^(\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}):(.+)$");
-        Matcher matcher = pattern.matcher(address);
+    public RMIAddress(String address) {
+        Matcher matcher = getMatcher(address);
 
         if(matcher.find()) {
             this.objectName = matcher.group(2);

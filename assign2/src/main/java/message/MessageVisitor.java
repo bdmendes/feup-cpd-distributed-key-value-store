@@ -1,6 +1,4 @@
-package server;
-
-import message.*;
+package message;
 
 public interface MessageVisitor {
     void processPut(PutMessage putMessage);

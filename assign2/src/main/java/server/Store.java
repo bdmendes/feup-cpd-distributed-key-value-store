@@ -38,8 +38,8 @@ public class Store {
         StorageService storageService = new StorageService(node);
         MembershipService membershipService = new MembershipService(storageService);
 
-        try (ServerSocket serverSocket = new ServerSocket(9000)) {
-            System.out.println("Store server is running on port " + 9000);
+        try (ServerSocket serverSocket = new ServerSocket(storePort)) {
+            System.out.println("Store server is running on port " + storePort);
 
             System.out.println("Got connection from client");
             Socket clientSocket = serverSocket.accept();

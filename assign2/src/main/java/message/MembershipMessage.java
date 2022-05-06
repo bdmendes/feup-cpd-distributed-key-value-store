@@ -1,7 +1,5 @@
 package message;
 
-import server.MessageVisitor;
-
 public class MembershipMessage extends Message {
     public MembershipMessage(String headers, byte[] data) {
 

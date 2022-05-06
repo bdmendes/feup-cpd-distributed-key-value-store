@@ -1,7 +1,5 @@
 package message;
 
-import server.MessageVisitor;
-
 public class JoinMessage extends Message {
     public JoinMessage(String headers, byte[] data) {
     }

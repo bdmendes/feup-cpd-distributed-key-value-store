@@ -1,18 +1,14 @@
 package client;
 
 import message.*;
-import utils.IPAddress;
 import utils.StoreUtils;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Scanner;
 
 public class TestClient {
     private record ClientArgs(String host, String operation, String operand) {
@@ -116,16 +112,6 @@ public class TestClient {
             return;
         }
 
-        IPAddress nodeAccessPoint;
-        try {
-            nodeAccessPoint = new IPAddress(clientArgs.host);
-        } catch (IllegalArgumentException e) {
-            System.out.println(e.getMessage());
-            printUsage();
-            System.exit(1);
-            return;
-        }
-
         Message msg;
         try {
             msg = createMessage(clientArgs);
@@ -136,12 +122,36 @@ public class TestClient {
             return;
         }
 
-        try(Socket socket = new Socket(nodeAccessPoint.getIp(), 9000)) { // imagine this is rmi and port is not used
-            OutputStream output = socket.getOutputStream();
-            output.write(msg.encode());
-        } catch (UnknownHostException e) {
-            System.out.println("Unknown host");
-            System.exit(1);
+        if(clientArgs.operation.equals("join") || clientArgs.operation.equals("leave")) {
+            RMIAddress nodeAccessPoint;
+            try {
+                nodeAccessPoint = new RMIAddress(clientArgs.host);
+            } catch (IllegalArgumentException e) {
+                System.out.println(e.getMessage());
+                printUsage();
+                System.exit(1);
+                return;
+            }
+
+            // membership stuff
+        } else {
+            TCPAddress nodeAccessPoint;
+            try {
+                nodeAccessPoint = new TCPAddress(clientArgs.host);
+            } catch (IllegalArgumentException e) {
+                System.out.println(e.getMessage());
+                printUsage();
+                System.exit(1);
+                return;
+            }
+
+            try(Socket socket = new Socket(nodeAccessPoint.getIp(), nodeAccessPoint.getPort())) {
+                OutputStream output = socket.getOutputStream();
+                output.write(msg.encode());
+            } catch (UnknownHostException e) {
+                System.out.println("Unknown host");
+                System.exit(1);
+            }
         }
     }
 }

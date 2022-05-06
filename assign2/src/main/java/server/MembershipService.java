@@ -4,8 +4,6 @@ import message.*;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 
 public class MembershipService implements MessageVisitor {
     private final StorageService storageService;
@@ -33,6 +31,9 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processPut(PutMessage putMessage) {
+        // FIND NODE TO STORE KEY/VALUE PAIR
+
+        // - THEN STORE KEY/VALUE PAIR:
         try {
             storageService.put(putMessage.getKey(), putMessage.getValue());
         } catch (IOException e) {
@@ -43,6 +44,9 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processGet(GetMessage getMessage) {
+        // FIND NODE TO STORE KEY/VALUE PAIR
+
+        // - THEN GET KEY/VALUE PAIR:
         try {
             byte[] value = storageService.get(getMessage.getKey());
 
@@ -57,6 +61,9 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processDelete(DeleteMessage deleteMessage) {
+        // FIND NODE TO DELETE KEY/VALUE PAIR
+
+        // - THEN DELETE KEY/VALUE PAIR:
         boolean deleted = storageService.delete(deleteMessage.getKey());
 
         if(!deleted) {
