@@ -42,6 +42,8 @@ public class ClientVisitor implements MessageVisitor {
             System.out.println("GET SUCCESS FOR " + getReply.getKey());
             System.out.println("VALUE:");
             System.out.println(new String(getReply.getValue()));
+        } else if (getReply.getStatusCode() == StatusCode.FILE_NOT_FOUND) {
+            System.out.println("GET FAILURE: NOT FOUND");
         } else {
             System.out.println("GET FAILURE");
         }
@@ -53,6 +55,17 @@ public class ClientVisitor implements MessageVisitor {
             System.out.println("PUT SUCCESS FOR " + putReply.getKey());
         } else {
             System.out.println("PUT FAILURE");
+        }
+    }
+
+    @Override
+    public void processDeleteReply(DeleteReply deleteReply, Socket socket) throws IOException {
+        if(deleteReply.getStatusCode() == StatusCode.OK) {
+            System.out.println("DELETE SUCCESS FOR " + deleteReply.getKey());
+        } else if (deleteReply.getStatusCode() == StatusCode.FILE_NOT_FOUND) {
+            System.out.println("DELETE FAILURE: NOT FOUND");
+        } else {
+            System.out.println("DELETE FAILURE");
         }
     }
 

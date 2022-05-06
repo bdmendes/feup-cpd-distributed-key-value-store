@@ -6,6 +6,7 @@ public enum MessageType {
     GET,
     GET_REPLY,
     DELETE,
+    DELETE_REPLY,
     JOIN,
     LEAVE,
     MEMBERSHIP,

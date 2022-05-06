@@ -36,18 +36,21 @@ public class MembershipService implements MessageVisitor {
         // FIND NODE TO STORE KEY/VALUE PAIR
 
         // IF IS THE CORRECT NODE - THEN STORE KEY/VALUE PAIR:
+        PutReply response = new PutReply();
+        response.setKey(putMessage.getKey());
+
         try {
             storageService.put(putMessage.getKey(), putMessage.getValue());
-
-            PutReply response = new PutReply();
             response.setStatusCode(StatusCode.OK);
-            response.setKey(putMessage.getKey());
+        } catch (IOException e) {
+            response.setStatusCode(StatusCode.ERROR);
+        }
 
+        try {
             OutputStream outputStream = socket.getOutputStream();
             outputStream.write(response.encode());
         } catch (IOException e) {
-            // TODO: error handling
-            throw new RuntimeException("Could not put key/value pair");
+            throw new RuntimeException("Could not send put reply");
         }
     }
 
@@ -56,19 +59,26 @@ public class MembershipService implements MessageVisitor {
         // FIND NODE TO STORE KEY/VALUE PAIR
 
         // IF IS THE CORRECT NODE - THEN GET KEY/VALUE PAIR:
+        GetReply response = new GetReply();
+        response.setKey(getMessage.getKey());
+
         try {
             byte[] value = storageService.get(getMessage.getKey());
 
-            GetReply response = new GetReply();
             response.setValue(value);
             response.setStatusCode(StatusCode.OK);
-            response.setKey(getMessage.getKey());
 
             OutputStream outputStream = socket.getOutputStream();
             outputStream.write(response.encode());
         } catch (IOException e) {
-            // TODO: error handling
-            throw new RuntimeException("Could not get key/value pair");
+            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+        }
+
+        try {
+            OutputStream outputStream = socket.getOutputStream();
+            outputStream.write(response.encode());
+        } catch (IOException e) {
+            throw new RuntimeException("Could not send get reply");
         }
     }
 
@@ -78,10 +88,20 @@ public class MembershipService implements MessageVisitor {
 
         // IF IS THE CORRECT NODE - THEN DELETE KEY/VALUE PAIR:
         boolean deleted = storageService.delete(deleteMessage.getKey());
+        DeleteReply response = new DeleteReply();
+        response.setKey(deleteMessage.getKey());
 
         if(!deleted) {
-            // TODO: error handling
-            throw new RuntimeException("Could not delete key/value pair");
+            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+        } else {
+            response.setStatusCode(StatusCode.OK);
+        }
+
+        try {
+            OutputStream outputStream = socket.getOutputStream();
+            outputStream.write(response.encode());
+        } catch (IOException e) {
+            throw new RuntimeException("Could not send delete reply");
         }
     }
 
@@ -114,6 +134,14 @@ public class MembershipService implements MessageVisitor {
 
         OutputStream outputStream = socket.getOutputStream();
         outputStream.write(putReply.encode());
+    }
+
+    @Override
+    public void processDeleteReply(DeleteReply deleteReply, Socket socket) throws IOException {
+        // propagate
+
+        OutputStream outputStream = socket.getOutputStream();
+        outputStream.write(deleteReply.encode());
     }
 
     @Override

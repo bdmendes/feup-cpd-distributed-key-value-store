@@ -4,32 +4,21 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
-public class GetReply extends ReplyMessage {
+public class DeleteReply extends ReplyMessage {
     private String key;
-    private byte[] value;
 
-    public GetReply() {
-
-    }
-
-    public GetReply(String headers, byte[] body) {
+    public DeleteReply(String headers) {
         Map<String, String> fields = decodeFields(headers);
-        key = fields.get("key");
-        value = body;
+        this.key = fields.get("key");
     }
 
-    public byte[] getValue() {
-        return value;
+    public DeleteReply() {
+
     }
 
     public String getKey() {
         return key;
-    }
-
-    public void setValue(byte[] value) {
-        this.value = value;
     }
 
     public void setKey(String key) {
@@ -40,15 +29,11 @@ public class GetReply extends ReplyMessage {
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
         fields.put("key", key);
-
-        byte[] body;
-        body = Objects.requireNonNullElseGet(value, () -> new byte[0]);
-
-        return encodeWithFields(MessageType.GET_REPLY, fields, body);
+        return encodeWithFields(MessageType.DELETE_REPLY, fields, new byte[0]);
     }
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) throws IOException {
-        visitor.processGetReply(this, socket);
+        visitor.processDeleteReply(this, socket);
     }
 }

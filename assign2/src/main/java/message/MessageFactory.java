@@ -16,6 +16,7 @@ public class MessageFactory {
             case GET -> new GetMessage(headers);
             case GET_REPLY -> new GetReply(headers, body);
             case DELETE -> new DeleteMessage(headers);
+            case DELETE_REPLY -> new DeleteReply(headers);
             case JOIN -> new JoinMessage(headers, body);
             case LEAVE -> new LeaveMessage(headers, body);
             case MEMBERSHIP -> new MembershipMessage(headers, body);
