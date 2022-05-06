@@ -17,5 +17,6 @@ public interface MessageVisitor {
     void processLeave(LeaveMessage leaveMessage, Socket socket);
 
     void processGetReply(GetReply getReply, Socket socket) throws IOException;
+    void processPutReply(PutReply putReply, Socket socket) throws IOException;
     void process(Message message, Socket socket) throws IOException;
 }

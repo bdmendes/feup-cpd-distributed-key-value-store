@@ -39,11 +39,20 @@ public class ClientVisitor implements MessageVisitor {
     @Override
     public void processGetReply(GetReply getReply, Socket socket) throws IOException {
         if(getReply.getStatusCode() == StatusCode.OK) {
-            System.out.println("GET SUCCESS");
+            System.out.println("GET SUCCESS FOR " + getReply.getKey());
             System.out.println("VALUE:");
             System.out.println(new String(getReply.getValue()));
         } else {
             System.out.println("GET FAILURE");
+        }
+    }
+
+    @Override
+    public void processPutReply(PutReply putReply, Socket socket) throws IOException {
+        if(putReply.getStatusCode() == StatusCode.OK) {
+            System.out.println("PUT SUCCESS FOR " + putReply.getKey());
+        } else {
+            System.out.println("PUT FAILURE");
         }
     }
 

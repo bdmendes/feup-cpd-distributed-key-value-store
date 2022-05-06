@@ -35,9 +35,16 @@ public class MembershipService implements MessageVisitor {
     public void processPut(PutMessage putMessage, Socket socket) {
         // FIND NODE TO STORE KEY/VALUE PAIR
 
-        // - THEN STORE KEY/VALUE PAIR:
+        // IF IS THE CORRECT NODE - THEN STORE KEY/VALUE PAIR:
         try {
             storageService.put(putMessage.getKey(), putMessage.getValue());
+
+            PutReply response = new PutReply();
+            response.setStatusCode(StatusCode.OK);
+            response.setKey(putMessage.getKey());
+
+            OutputStream outputStream = socket.getOutputStream();
+            outputStream.write(response.encode());
         } catch (IOException e) {
             // TODO: error handling
             throw new RuntimeException("Could not put key/value pair");
@@ -48,7 +55,7 @@ public class MembershipService implements MessageVisitor {
     public void processGet(GetMessage getMessage, Socket socket) {
         // FIND NODE TO STORE KEY/VALUE PAIR
 
-        // - THEN GET KEY/VALUE PAIR:
+        // IF IS THE CORRECT NODE - THEN GET KEY/VALUE PAIR:
         try {
             byte[] value = storageService.get(getMessage.getKey());
 
@@ -69,7 +76,7 @@ public class MembershipService implements MessageVisitor {
     public void processDelete(DeleteMessage deleteMessage, Socket socket) {
         // FIND NODE TO DELETE KEY/VALUE PAIR
 
-        // - THEN DELETE KEY/VALUE PAIR:
+        // IF IS THE CORRECT NODE - THEN DELETE KEY/VALUE PAIR:
         boolean deleted = storageService.delete(deleteMessage.getKey());
 
         if(!deleted) {
@@ -99,6 +106,14 @@ public class MembershipService implements MessageVisitor {
 
         OutputStream outputStream = socket.getOutputStream();
         outputStream.write(getReply.encode());
+    }
+
+    @Override
+    public void processPutReply(PutReply putReply, Socket socket) throws IOException {
+        // propagate
+
+        OutputStream outputStream = socket.getOutputStream();
+        outputStream.write(putReply.encode());
     }
 
     @Override
