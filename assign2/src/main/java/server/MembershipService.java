@@ -15,21 +15,6 @@ public class MembershipService implements MessageVisitor {
         this.storageService = storageService;
     }
 
-    static String sha256(String str) {
-        try {
-            MessageDigest messageDigest = MessageDigest.getInstance("SHA-256");
-            messageDigest.update(str.getBytes(StandardCharsets.UTF_8));
-            byte[] digest = messageDigest.digest();
-            StringBuilder stringBuilder = new StringBuilder();
-            for (byte b : digest) {
-                stringBuilder.append(String.format("%02x", b));
-            }
-            return stringBuilder.toString();
-        } catch (NoSuchAlgorithmException e) {
-            return str;
-        }
-    }
-
     private void sendMembershipStatus() {
         //
     }

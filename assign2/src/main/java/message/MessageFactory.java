@@ -12,7 +12,7 @@ public class MessageFactory {
 
         return switch (type) {
             case PUT -> new PutMessage(headers, body);
-            case GET -> new GetMessage(headers, body);
+            case GET -> new GetMessage(headers);
             case DELETE -> new DeleteMessage(headers, body);
             case JOIN -> new JoinMessage(headers, body);
             case LEAVE -> new LeaveMessage(headers, body);

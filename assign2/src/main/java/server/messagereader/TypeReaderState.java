@@ -16,7 +16,6 @@ public class TypeReaderState extends MessageReaderState {
         if (line == null) {
             return;
         }
-        System.out.println("TypeReaderState: " + line);
 
         try {
             MessageType.valueOf(line);
