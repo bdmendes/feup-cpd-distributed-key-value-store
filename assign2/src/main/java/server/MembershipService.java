@@ -57,7 +57,12 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processDelete(DeleteMessage deleteMessage) {
+        boolean deleted = storageService.delete(deleteMessage.getKey());
 
+        if(!deleted) {
+            // TODO: error handling
+            throw new RuntimeException("Could not delete key/value pair");
+        }
     }
 
     @Override

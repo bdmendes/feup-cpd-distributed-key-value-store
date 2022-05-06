@@ -87,6 +87,16 @@ public class TestClient {
 
                 msg = getMessage;
             }
+            case "delete" -> {
+                if (operand == null) {
+                    throw new IllegalArgumentException("Missing operand");
+                }
+
+                DeleteMessage deleteMessage = new DeleteMessage();
+                deleteMessage.setKey(operand);
+
+                msg = deleteMessage;
+            }
             default -> {
                 throw new IllegalArgumentException("Invalid operation");
             }
