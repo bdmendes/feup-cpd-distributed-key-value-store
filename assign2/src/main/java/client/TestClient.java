@@ -1,9 +1,6 @@
 package client;
 
-import message.JoinMessage;
-import message.Message;
-import message.MessageConstants;
-import message.PutMessage;
+import message.*;
 import utils.IPAddress;
 import utils.StoreUtils;
 
@@ -79,6 +76,16 @@ public class TestClient {
                 } catch (IOException e) {
                     throw new IllegalArgumentException("File not found");
                 }
+            }
+            case "get" -> {
+                if (operand == null) {
+                    throw new IllegalArgumentException("Missing operand");
+                }
+
+                GetMessage getMessage = new GetMessage();
+                getMessage.setKey(operand);
+
+                msg = getMessage;
             }
             default -> {
                 throw new IllegalArgumentException("Invalid operation");

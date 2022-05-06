@@ -9,6 +9,7 @@ import javax.xml.crypto.Data;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.Arrays;
 
 import static message.MessageConstants.END_OF_LINE;
 
@@ -24,6 +25,7 @@ public class Store {
         String ipMulticastPort = args[1];
         String nodeId = args[2];
         int storePort;
+
         try {
             storePort = Integer.parseInt(args[3]);
         } catch (NumberFormatException e) {
@@ -31,7 +33,8 @@ public class Store {
             System.exit(1);
             return;
         }
-        Node node = new Node(nodeId, 9000);
+
+        Node node = new Node(nodeId, storePort);
         StorageService storageService = new StorageService(node);
         MembershipService membershipService = new MembershipService(storageService);
 

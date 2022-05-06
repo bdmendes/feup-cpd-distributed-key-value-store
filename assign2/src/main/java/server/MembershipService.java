@@ -37,13 +37,22 @@ public class MembershipService implements MessageVisitor {
             storageService.put(putMessage.getKey(), putMessage.getValue());
         } catch (IOException e) {
             // TODO: error handling
-            e.printStackTrace();
+            throw new RuntimeException("Could not put key/value pair");
         }
     }
 
     @Override
     public void processGet(GetMessage getMessage) {
+        try {
+            byte[] value = storageService.get(getMessage.getKey());
 
+            // TODO: use remote object to send value to client
+            // for now, just print it to console
+            System.out.println(new String(value, StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            // TODO: error handling
+            throw new RuntimeException("Could not get key/value pair");
+        }
     }
 
     @Override

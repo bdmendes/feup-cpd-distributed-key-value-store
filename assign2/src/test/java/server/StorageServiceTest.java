@@ -13,7 +13,7 @@ class StorageServiceTest {
 
     @AfterAll
     static void deleteTestAssets() throws IOException {
-        StorageService storageService = new StorageService(new Node("-1", 0));
+        StorageService storageService = new StorageService(new Node("-1", 100));
         File directory = new File(storageService.getValueFilesDirectory());
         if(directory.exists()){
             File[] files = directory.listFiles();

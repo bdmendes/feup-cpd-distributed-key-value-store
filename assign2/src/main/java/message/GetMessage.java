@@ -2,6 +2,7 @@ package message;
 
 import server.MessageVisitor;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class GetMessage extends Message {
@@ -20,9 +21,17 @@ public class GetMessage extends Message {
         this.key = key;
     }
 
+    public String getKey() {
+        return key;
+    }
+
     @Override
     public byte[] encode() {
-        return new byte[0];
+        HashMap<String, String> fields = new HashMap<>();
+        fields.put("key", key);
+        byte[] body = new byte[0];
+
+        return Message.encodeWithFields(MessageType.GET, fields, body);
     }
 
     @Override
