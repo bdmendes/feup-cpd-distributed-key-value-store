@@ -1,5 +1,6 @@
 package server;
 
+import communication.IPAddress;
 import message.Message;
 import message.MessageFactory;
 import message.messagereader.MessageReader;
@@ -8,6 +9,8 @@ import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Store {
     public static void main(String[] args) throws IOException {
@@ -32,14 +35,16 @@ public class Store {
 
         Node node = new Node(nodeId, storePort);
         StorageService storageService = new StorageService(node);
-        MembershipService membershipService = new MembershipService(storageService, InetAddress.getByName(
-                ipMulticast + ":" + ipMulticastPort));
+        MembershipService membershipService = new MembershipService(storageService,
+                new IPAddress(ipMulticast, Integer.parseInt(ipMulticastPort)));
+
+        ExecutorService executorService = Executors.newCachedThreadPool();
 
         try (ServerSocket serverSocket = new ServerSocket(storePort)) {
             System.out.println("Store server is running on port " + storePort);
 
-            System.out.println("Got connection from client");
             Socket clientSocket = serverSocket.accept();
+            System.out.println("Got connection from client");
             BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
             MessageReader messageReader = new MessageReader();
@@ -49,7 +54,9 @@ public class Store {
             }
 
             Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-            membershipService.process(message, clientSocket);
+            MessageProcessor processor = new MessageProcessor(membershipService, message, clientSocket);
+            executorService.execute(processor);
         }
+        executorService.shutdown();
     }
 }

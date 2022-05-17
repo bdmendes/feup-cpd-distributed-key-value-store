@@ -7,7 +7,11 @@ import java.net.Socket;
 public class MessageSender {
     private final Socket socket;
 
-    MessageSender(IPAddress ipAddress) throws IOException {
+    public MessageSender(Socket socket) {
+        this.socket = socket;
+    }
+
+    public MessageSender(IPAddress ipAddress) throws IOException {
         this.socket = new Socket(ipAddress.getIp(), ipAddress.getPort());
     }
 

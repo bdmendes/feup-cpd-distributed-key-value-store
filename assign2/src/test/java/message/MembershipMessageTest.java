@@ -10,20 +10,18 @@ import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class MembershipMessageTest {
 
-    List<Node> nodes;
+    Set<Node> nodes;
     private Map<String, Integer> membershipLog;
 
     @BeforeEach
     void generate() {
-        nodes = new ArrayList<>();
+        nodes = new HashSet<>();
         membershipLog = MembershipLog.generateMembershipLog();
         membershipLog.put("0", 0);
         membershipLog.put("1", 0);
@@ -34,9 +32,7 @@ class MembershipMessageTest {
 
     @Test
     void encodeDecodeMessage() throws IOException {
-        MembershipMessage membershipMessage = new MembershipMessage();
-        nodes.forEach(membershipMessage::addNode);
-        membershipLog.forEach((key, value) -> membershipMessage.getMembershipLog().put(key, value));
+        MembershipMessage membershipMessage = new MembershipMessage(nodes, membershipLog);
         byte[] data = membershipMessage.encode();
 
         MessageReader messageReader = new MessageReader();

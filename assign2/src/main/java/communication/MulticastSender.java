@@ -13,10 +13,10 @@ public class MulticastSender {
         this.message = message;
         socket = new MulticastSocket(multicastAddress.getPort());
         InetSocketAddress bindAddress = new InetSocketAddress(multicastAddress.getIp(), multicastAddress.getPort());
-        socket.joinGroup(bindAddress, null);
+        socket.joinGroup(bindAddress, NetworkInterface.getByInetAddress(bindAddress.getAddress()));
     }
 
-    private void sendMessage() {
+    public void sendMessage() {
         byte[] bytes = this.message.encode();
         DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
         try {
