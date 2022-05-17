@@ -5,6 +5,7 @@ import message.MessageFactory;
 import message.messagereader.MessageReader;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -31,7 +32,8 @@ public class Store {
 
         Node node = new Node(nodeId, storePort);
         StorageService storageService = new StorageService(node);
-        MembershipService membershipService = new MembershipService(storageService);
+        MembershipService membershipService = new MembershipService(storageService, InetAddress.getByName(
+                ipMulticast + ":" + ipMulticastPort));
 
         try (ServerSocket serverSocket = new ServerSocket(storePort)) {
             System.out.println("Store server is running on port " + storePort);

@@ -14,10 +14,11 @@ public interface MessageVisitor {
 
     void processJoin(JoinMessage joinMessage, Socket socket);
 
-    void processLeave(LeaveMessage leaveMessage, Socket socket);
-
     void processGetReply(GetReply getReply, Socket socket) throws IOException;
+
     void processPutReply(PutReply putReply, Socket socket) throws IOException;
+
     void processDeleteReply(DeleteReply deleteReply, Socket socket) throws IOException;
+
     void process(Message message, Socket socket) throws IOException;
 }

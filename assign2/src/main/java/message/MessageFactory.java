@@ -1,6 +1,5 @@
 package message;
 
-
 public class MessageFactory {
     private static String readLine(String data) {
         return data.substring(0, data.indexOf(0x0D));
@@ -17,8 +16,7 @@ public class MessageFactory {
             case GET_REPLY -> new GetReply(headers, body);
             case DELETE -> new DeleteMessage(headers);
             case DELETE_REPLY -> new DeleteReply(headers);
-            case JOIN -> new JoinMessage(headers, body);
-            case LEAVE -> new LeaveMessage(headers, body);
+            case JOIN -> new JoinMessage(headers);
             case MEMBERSHIP -> new MembershipMessage(headers, body);
         };
     }

@@ -32,11 +32,6 @@ public class ClientVisitor implements MessageVisitor {
     }
 
     @Override
-    public void processLeave(LeaveMessage leaveMessage, Socket socket) {
-
-    }
-
-    @Override
     public void processGetReply(GetReply getReply, Socket socket) throws IOException {
         if(getReply.getStatusCode() == StatusCode.OK) {
             System.out.println("GET SUCCESS FOR " + getReply.getKey());

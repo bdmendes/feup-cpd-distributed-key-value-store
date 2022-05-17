@@ -1,28 +1,31 @@
 package server;
 
 import message.*;
-import utils.StoreUtils;
+import utils.MembershipLog;
 
 import java.io.*;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class MembershipService implements MessageVisitor {
     private final StorageService storageService;
     private int nodeMembershipCounter;
-    private final Map<String, Integer> membershipLog;
+    private Map<String, Integer> membershipLog;
+    private final InetAddress ipMulticastGroup;
 
-    public MembershipService(StorageService storageService) {
+    public MembershipService(StorageService storageService, InetAddress ipMulticastGroup) {
         this.storageService = storageService;
-        this.membershipLog = Collections.synchronizedMap(new LinkedHashMap<>(
-                32, .75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
-                return this.size() > 32;
-            }
-        });
+        this.ipMulticastGroup = ipMulticastGroup;
+        this.membershipLog = MembershipLog.generateMembershipLog();
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
+    }
+
+    public InetAddress getIpMulticastGroup() {
+        return ipMulticastGroup;
     }
 
     public Map<String, Integer> getMembershipLog() {
@@ -51,34 +54,22 @@ public class MembershipService implements MessageVisitor {
     }
 
     protected void readMembershipLogFromFile() {
+
+        byte[] bytes = new byte[0];
         try {
-            Scanner scanner = new Scanner(new File(getMembershipLogFilePath()));
-            while (scanner.hasNextLine()){
-                String[] line = scanner.nextLine().split(" ");
-                String nodeId = line[0];
-                int counter = Integer.parseInt(line[1]);
-                membershipLog.put(nodeId, counter);
-            }
-            scanner.close();
-        } catch (FileNotFoundException e) {
+            bytes = Files.readAllBytes(Path.of(getMembershipLogFilePath()));
+            MembershipLog.readMembershipLogFromData(membershipLog, bytes);
+        } catch (IOException e) {
             this.writeMembershipLogToFile();
         }
     }
 
     protected void writeMembershipLogToFile() {
-        try {
-            FileWriter fileWriter = new FileWriter(getMembershipLogFilePath());
-            this.membershipLog.forEach((key, value) -> {
-                try {
-                    fileWriter.write(key + " " + value);
-                    fileWriter.write(MessageConstants.END_OF_LINE);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            });
-            fileWriter.close();
+        byte[] bytes = MembershipLog.writeMembershipLogToData(this.membershipLog);
+        try (FileOutputStream fos = new FileOutputStream(getMembershipLogFilePath())) {
+            fos.write(bytes);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
         }
     }
 
@@ -86,12 +77,28 @@ public class MembershipService implements MessageVisitor {
         //
     }
 
-    private void joinCluster() {
-
+    private void multicastJoinLeave() {
+        JoinMessage message = new JoinMessage();
+        message.setCounter(nodeMembershipCounter);
+        message.setNodeId(storageService.getNode().id());
+        incrementCounter();
     }
 
-    private void leaveCluster() {
 
+    public void joinCluster() {
+        if (nodeMembershipCounter % 2 != 0) {
+            return;
+        }
+
+        this.multicastJoinLeave();
+    }
+
+    public void leaveCluster() {
+        if (nodeMembershipCounter % 2 == 0) {
+            return;
+        }
+
+        this.multicastJoinLeave();
     }
 
     public int getNodeMembershipCounter() {
@@ -179,11 +186,6 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processJoin(JoinMessage joinMessage, Socket socket) {
-
-    }
-
-    @Override
-    public void processLeave(LeaveMessage leaveMessage, Socket socket) {
 
     }
 

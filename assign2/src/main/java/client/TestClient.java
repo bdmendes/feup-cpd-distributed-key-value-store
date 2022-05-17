@@ -1,5 +1,7 @@
 package client;
 
+import communication.RMIAddress;
+import communication.IPAddress;
 import message.*;
 import message.messagereader.MessageReader;
 import utils.StoreUtils;
@@ -134,9 +136,9 @@ public class TestClient {
 
             // membership stuff
         } else {
-            TCPAddress nodeAccessPoint;
+            IPAddress nodeAccessPoint;
             try {
-                nodeAccessPoint = new TCPAddress(clientArgs.host);
+                nodeAccessPoint = new IPAddress(clientArgs.host);
             } catch (IllegalArgumentException e) {
                 System.out.println(e.getMessage());
                 printUsage();
