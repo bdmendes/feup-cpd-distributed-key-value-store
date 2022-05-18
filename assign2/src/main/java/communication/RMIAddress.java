@@ -1,9 +1,8 @@
-package client;
+package communication;
 
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-public class RMIAddress extends IPAddress{
+public class RMIAddress extends Address {
     private final String ip;
     private final String objectName;
 

@@ -41,6 +41,11 @@ public class StorageService {
     }
 
     public String getValueFilesDirectory() {
-        return "./node_storage/storage" + node + "/hash_table";
+        return getStorageDirectory() + "/hash_table";
+    }
+
+    public String getStorageDirectory() {
+        return "./node_storage/storage" + node;
+
     }
 }

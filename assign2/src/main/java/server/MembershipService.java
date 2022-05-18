@@ -1,138 +1,157 @@
 package server;
 
+import communication.IPAddress;
+import communication.MessageReceiver;
+import communication.MessageSender;
+import communication.MulticastSender;
 import message.*;
+import utils.MembershipLog;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
-public class MembershipService implements MessageVisitor {
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class MembershipService {
     private final StorageService storageService;
+    private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
+    private final Map<String, Integer> membershipLog;
+    private final Set<Node> clusterNodes;
+    private final IPAddress ipMulticastGroup;
 
-
-    public MembershipService(StorageService storageService) {
+    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) {
         this.storageService = storageService;
+        this.ipMulticastGroup = ipMulticastGroup;
+        this.membershipLog = MembershipLog.generateMembershipLog();
+        clusterNodes = ConcurrentHashMap.newKeySet();
+        clusterNodes.add(storageService.getNode());
+        this.readMembershipCounterFromFile();
+        this.readMembershipLogFromFile();
     }
 
-    private void joinCluster() {
-
+    public StorageService getStorageService() {
+        return storageService;
     }
 
-    private void leaveCluster() {
-
+    public Set<Node> getClusterNodes() {
+        return clusterNodes;
     }
-    @Override
-    public void processPut(PutMessage putMessage, Socket socket) {
-        // FIND NODE TO STORE KEY/VALUE PAIR
 
-        // IF IS THE CORRECT NODE - THEN STORE KEY/VALUE PAIR:
-        PutReply response = new PutReply();
-        response.setKey(putMessage.getKey());
+    public IPAddress getIpMulticastGroup() {
+        return ipMulticastGroup;
+    }
 
+    public Map<String, Integer> getMembershipLog() {
+        return membershipLog;
+    }
+
+    protected void readMembershipCounterFromFile() {
         try {
-            storageService.put(putMessage.getKey(), putMessage.getValue());
-            response.setStatusCode(StatusCode.OK);
-        } catch (IOException e) {
-            response.setStatusCode(StatusCode.ERROR);
+            Scanner scanner = new Scanner(new File(getMembershipCounterFilePath()));
+            nodeMembershipCounter.set(scanner.nextInt());
+            scanner.close();
+        } catch (Exception e) {
+            nodeMembershipCounter.set(0);
+            this.writeMembershipCounterToFile(0);
         }
+    }
 
+    protected void writeMembershipCounterToFile(int counter) {
         try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
+            FileWriter fileWriter = new FileWriter(getMembershipCounterFilePath());
+            fileWriter.write(Integer.toString(counter));
+            fileWriter.close();
         } catch (IOException e) {
-            throw new RuntimeException("Could not send put reply");
+            throw new RuntimeException(e);
         }
     }
 
-    @Override
-    public void processGet(GetMessage getMessage, Socket socket) {
-        // FIND NODE TO STORE KEY/VALUE PAIR
-
-        // IF IS THE CORRECT NODE - THEN GET KEY/VALUE PAIR:
-        GetReply response = new GetReply();
-        response.setKey(getMessage.getKey());
-
+    protected void readMembershipLogFromFile() {
+        byte[] bytes;
         try {
-            byte[] value = storageService.get(getMessage.getKey());
-
-            response.setValue(value);
-            response.setStatusCode(StatusCode.OK);
+            bytes = Files.readAllBytes(Path.of(getMembershipLogFilePath()));
+            MembershipLog.readMembershipLogFromData(membershipLog, bytes);
         } catch (IOException e) {
-            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+            this.writeMembershipLogToFile();
         }
+    }
 
-        try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
+    protected void writeMembershipLogToFile() {
+        byte[] bytes = MembershipLog.writeMembershipLogToData(this.membershipLog);
+        try (FileOutputStream fos = new FileOutputStream(getMembershipLogFilePath())) {
+            fos.write(bytes);
         } catch (IOException e) {
-            throw new RuntimeException("Could not send get reply");
+            e.printStackTrace();
         }
     }
 
-    @Override
-    public void processDelete(DeleteMessage deleteMessage, Socket socket) {
-        // FIND NODE TO DELETE KEY/VALUE PAIR
+    private void multicastMembershipLog() {
+        //
+    }
 
-        // IF IS THE CORRECT NODE - THEN DELETE KEY/VALUE PAIR:
-        boolean deleted = storageService.delete(deleteMessage.getKey());
-        DeleteReply response = new DeleteReply();
-        response.setKey(deleteMessage.getKey());
-
-        if(!deleted) {
-            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
-        } else {
-            response.setStatusCode(StatusCode.OK);
+    private boolean multicastJoinLeave(ServerSocket serverSocket) throws IOException {
+        JoinMessage message = new JoinMessage();
+        message.setCounter(nodeMembershipCounter.get());
+        message.setNodeId(storageService.getNode().id());
+        incrementCounter();
+        MulticastSender multicastSender = new MulticastSender(message, ipMulticastGroup);
+        MessageReceiver messageReceiver = new MessageReceiver(serverSocket, 200);
+        multicastSender.sendMessage();
+        for (int i = 0; i < 3; i++){
+            Message receivedMessage = messageReceiver.receiveMessage();
+            if (receivedMessage == null) {
+                if (i == 2){
+                    return false;
+                }
+                multicastSender.sendMessage();
+                continue;
+            }
+            MessageProcessor processor = new MessageProcessor(this, receivedMessage, null);
+            processor.run();
         }
+        return true;
+    }
 
-        try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send delete reply");
+
+    public boolean joinCluster(ServerSocket serverSocket) throws IOException {
+        if (nodeMembershipCounter.get() % 2 != 0) {
+            return false;
         }
+        return this.multicastJoinLeave(serverSocket);
     }
 
-    @Override
-    public void processMembership(MembershipMessage membershipMessage, Socket socket) {
-        // THE MAGIC GOES HERE
+    public void leaveCluster(ServerSocket serverSocket) throws IOException {
+        if (nodeMembershipCounter.get() % 2 == 0) {
+            return;
+        }
+        this.multicastJoinLeave(serverSocket);
     }
 
-    @Override
-    public void processJoin(JoinMessage joinMessage, Socket socket) {
-
+    public int getNodeMembershipCounter() {
+        return nodeMembershipCounter.get();
     }
 
-    @Override
-    public void processLeave(LeaveMessage leaveMessage, Socket socket) {
 
+    private String getMembershipCounterFilePath() {
+        return "./node_storage/storage" + storageService.getNode() + "/membership_counter.txt";
     }
 
-    @Override
-    public void processGetReply(GetReply getReply, Socket socket) throws IOException {
-        // propagate
-
-        OutputStream outputStream = socket.getOutputStream();
-        outputStream.write(getReply.encode());
+    private String getMembershipLogFilePath() {
+        return "./node_storage/storage" + storageService.getNode() + "/membership_log.txt";
     }
 
-    @Override
-    public void processPutReply(PutReply putReply, Socket socket) throws IOException {
-        // propagate
-
-        OutputStream outputStream = socket.getOutputStream();
-        outputStream.write(putReply.encode());
+    protected void addMembershipEvent(String nodeId, int membershipCounter){
+        membershipLog.put(nodeId, membershipCounter);
+        this.writeMembershipLogToFile();
     }
 
-    @Override
-    public void processDeleteReply(DeleteReply deleteReply, Socket socket) throws IOException {
-        // propagate
-
-        OutputStream outputStream = socket.getOutputStream();
-        outputStream.write(deleteReply.encode());
-    }
-
-    @Override
-    public void process(Message message, Socket socket) throws IOException {
-        message.accept(this, socket);
+    protected void incrementCounter() {
+        int counter = this.nodeMembershipCounter.incrementAndGet();
+        this.writeMembershipCounterToFile(counter);
     }
 }

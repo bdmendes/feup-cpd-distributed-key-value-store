@@ -1,6 +1,6 @@
 package utils;
 
-import client.RMIAddress;
+import communication.RMIAddress;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
