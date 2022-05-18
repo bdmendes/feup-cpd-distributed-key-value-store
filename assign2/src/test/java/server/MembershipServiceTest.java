@@ -1,5 +1,6 @@
 package server;
 
+import communication.IPAddress;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,19 +37,19 @@ public class MembershipServiceTest {
     @Test
     void testGetPut() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
-        MembershipService service = new MembershipService(storageService, null);
+        MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
         service.incrementCounter();
         service.incrementCounter();
 
         assertEquals(2, service.getNodeMembershipCounter());
 
-        MembershipService service2 = new MembershipService(storageService, null);
+        MembershipService service2 = new MembershipService(storageService, new IPAddress("", 0));
 
         assertEquals(2, service2.getNodeMembershipCounter());
 
         service2.incrementCounter();
 
-        MembershipService service3 = new MembershipService(storageService, null);
+        MembershipService service3 = new MembershipService(storageService, new IPAddress("", 0));
         assertEquals(3, service3.getNodeMembershipCounter());
     }
 
@@ -56,7 +57,7 @@ public class MembershipServiceTest {
     @Test
     void testLogPutGet() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
-        MembershipService service = new MembershipService(storageService, null);
+        MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
 
         service.addMembershipEvent("0", 0);
         service.addMembershipEvent("2", 3);
@@ -71,7 +72,7 @@ public class MembershipServiceTest {
                 List.of(new Integer[]{0, 3})
         );
 
-        MembershipService service2 = new MembershipService(storageService, null);
+        MembershipService service2 = new MembershipService(storageService, new IPAddress("", 0));
 
         membershipLog = service2.getMembershipLog();
         assertEquals(2, membershipLog.size());
@@ -87,7 +88,7 @@ public class MembershipServiceTest {
     @Test
     void testElderyRemoval() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
-        MembershipService service = new MembershipService(storageService, null);
+        MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
 
         for (int i = 0; i < 40; i++) {
             service.addMembershipEvent(Integer.toString(i), i);

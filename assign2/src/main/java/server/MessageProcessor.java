@@ -106,6 +106,8 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket socket) {
         // update my membership view using Moodle's merge algorithm (in the forum)
+        // deixa a magia acontecer
+        //MembershipService.doEverything(true);
     }
 
     @Override

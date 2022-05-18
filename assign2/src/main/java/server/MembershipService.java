@@ -17,17 +17,19 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class MembershipService {
+public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
     private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
     private final Map<String, Integer> membershipLog;
     private final Set<Node> clusterNodes;
     private final IPAddress ipMulticastGroup;
+    private final ServerSocket serverSocket;
 
-    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) {
+    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.membershipLog = MembershipLog.generateMembershipLog();
+        this.serverSocket = new ServerSocket(ipMulticastGroup.getPort());
         clusterNodes = ConcurrentHashMap.newKeySet();
         clusterNodes.add(storageService.getNode());
         this.readMembershipCounterFromFile();
@@ -106,7 +108,7 @@ public class MembershipService {
             Message receivedMessage = messageReceiver.receiveMessage();
             if (receivedMessage == null) {
                 if (i == 2){
-                    return false;
+                    return true;
                 }
                 multicastSender.sendMessage();
                 continue;
@@ -117,19 +119,20 @@ public class MembershipService {
         return true;
     }
 
-
-    public boolean joinCluster(ServerSocket serverSocket) throws IOException {
+    @Override
+    public boolean join() throws IOException {
         if (nodeMembershipCounter.get() % 2 != 0) {
             return false;
         }
         return this.multicastJoinLeave(serverSocket);
     }
 
-    public void leaveCluster(ServerSocket serverSocket) throws IOException {
+    @Override
+    public boolean leave() throws IOException {
         if (nodeMembershipCounter.get() % 2 == 0) {
-            return;
+            return false;
         }
-        this.multicastJoinLeave(serverSocket);
+        return this.multicastJoinLeave(serverSocket);
     }
 
     public int getNodeMembershipCounter() {

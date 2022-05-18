@@ -4,12 +4,15 @@ import communication.RMIAddress;
 import communication.IPAddress;
 import message.*;
 import message.messagereader.MessageReader;
+import server.MembershipRMI;
 import utils.StoreUtils;
 
 import java.io.*;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.nio.file.Files;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 
 public class TestClient {
     private record ClientArgs(String host, String operation, String operand) {
@@ -19,7 +22,7 @@ public class TestClient {
     }
 
     private static void printUsage() {
-        System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
+            System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
     }
 
     private static ClientArgs parseArgs(String[] args) {
@@ -29,7 +32,7 @@ public class TestClient {
 
         String nodeAccessPoint = args[0];
         String operation = args[1];
-        String operand = null;
+        String operand;
         ClientArgs clientArgs;
 
         if (!operation.equals("join") && !operation.equals("leave")) {
@@ -94,9 +97,7 @@ public class TestClient {
 
                 msg = deleteMessage;
             }
-            default -> {
-                throw new IllegalArgumentException("Invalid operation");
-            }
+            default -> throw new IllegalArgumentException("Invalid operation");
         }
 
         return msg;
@@ -113,17 +114,7 @@ public class TestClient {
             return;
         }
 
-        Message msg;
-        try {
-            msg = createMessage(clientArgs);
-        } catch (IllegalArgumentException e) {
-            System.out.println(e.getMessage());
-            printUsage();
-            System.exit(1);
-            return;
-        }
-
-        if(clientArgs.operation.equals("join") || clientArgs.operation.equals("leave")) {
+        if (clientArgs.operation.equals("join") || clientArgs.operation.equals("leave")) {
             RMIAddress nodeAccessPoint;
             try {
                 nodeAccessPoint = new RMIAddress(clientArgs.host);
@@ -134,8 +125,26 @@ public class TestClient {
                 return;
             }
 
-            // membership stuff
+            try {
+                Registry registry = LocateRegistry.getRegistry(nodeAccessPoint.getIp());
+                MembershipRMI stub = (MembershipRMI) registry.lookup(nodeAccessPoint.getObjectName());
+                boolean response = clientArgs.operation.equals("join") ? stub.join() : stub.leave();
+                System.out.println("response: " + response);
+            } catch (Exception e) {
+                System.err.println("Client RMI operation exception: " + e);
+                e.printStackTrace();
+            }
+
         } else {
+            Message msg;
+            try {
+                msg = createMessage(clientArgs);
+            } catch (IllegalArgumentException e) {
+                System.out.println(e.getMessage());
+                printUsage();
+                System.exit(1);
+                return;
+            }
             IPAddress nodeAccessPoint;
             try {
                 nodeAccessPoint = new IPAddress(clientArgs.host);
@@ -146,7 +155,7 @@ public class TestClient {
                 return;
             }
 
-            try(Socket socket = new Socket(nodeAccessPoint.getIp(), nodeAccessPoint.getPort())) {
+            try (Socket socket = new Socket(nodeAccessPoint.getIp(), nodeAccessPoint.getPort())) {
                 OutputStream output = socket.getOutputStream();
                 output.write(msg.encode());
 
@@ -155,7 +164,7 @@ public class TestClient {
 
                 MessageReader messageReader = new MessageReader();
 
-                while(!messageReader.isComplete()) {
+                while (!messageReader.isComplete()) {
                     messageReader.read(in);
                 }
 

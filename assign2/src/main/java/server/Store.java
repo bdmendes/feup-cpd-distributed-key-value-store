@@ -8,10 +8,25 @@ import message.messagereader.MessageReader;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class Store {
+    public static void bindRmiMethods(MembershipService membershipService){
+        try {
+            MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
+            Registry registry = LocateRegistry.getRegistry();
+            registry.bind("reg" + membershipService.getStorageService().getNode().id(), stub);
+            System.err.println("Server ready for RMI operations");
+        } catch (Exception e) {
+            System.err.println("Could not bind membership service stub to RMI registry: " + e);
+            e.printStackTrace();
+        }
+    }
+
     public static void main(String[] args) throws IOException {
         if (args.length != 4) {
             System.out.println("Usage: java Store <IP_mcast_addr> <IP_mcast_port> <node_id> <Store_port>");
@@ -36,9 +51,12 @@ public class Store {
         StorageService storageService = new StorageService(node);
         MembershipService membershipService = new MembershipService(storageService,
                 new IPAddress(ipMulticast, Integer.parseInt(ipMulticastPort)));
+        Store.bindRmiMethods(membershipService);
 
-        ExecutorService executorService = Executors.newCachedThreadPool();
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
 
+        // TCP LISTENER
+        // ADD UDP THREAD TO PROCESS MULTICAST JOINS AND LEAVES
         try (ServerSocket serverSocket = new ServerSocket(storePort)) {
             System.out.println("Store server is running on port " + storePort);
 
