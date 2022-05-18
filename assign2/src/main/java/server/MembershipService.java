@@ -6,17 +6,12 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-
 public class MembershipService implements MessageVisitor {
     private final StorageService storageService;
-    private final int membershipCounter = 0;
+
 
     public MembershipService(StorageService storageService) {
         this.storageService = storageService;
-    }
-
-    private void sendMembershipStatus() {
-        //
     }
 
     private void joinCluster() {
@@ -26,11 +21,6 @@ public class MembershipService implements MessageVisitor {
     private void leaveCluster() {
 
     }
-
-    public int getMembershipCounter() {
-        return membershipCounter;
-    }
-
     @Override
     public void processPut(PutMessage putMessage, Socket socket) {
         // FIND NODE TO STORE KEY/VALUE PAIR
@@ -67,9 +57,6 @@ public class MembershipService implements MessageVisitor {
 
             response.setValue(value);
             response.setStatusCode(StatusCode.OK);
-
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
         } catch (IOException e) {
             response.setStatusCode(StatusCode.FILE_NOT_FOUND);
         }
@@ -107,7 +94,7 @@ public class MembershipService implements MessageVisitor {
 
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket socket) {
-
+        // THE MAGIC GOES HERE
     }
 
     @Override

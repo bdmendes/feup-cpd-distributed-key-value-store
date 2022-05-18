@@ -29,7 +29,7 @@ public class Store {
             return;
         }
 
-        Node node = new Node(nodeId, storePort);
+        Node node = new Node(nodeId, storePort, "object" + nodeId);
         StorageService storageService = new StorageService(node);
         MembershipService membershipService = new MembershipService(storageService);
 

@@ -13,7 +13,7 @@ class StorageServiceTest {
 
     @AfterAll
     static void deleteTestAssets() throws IOException {
-        StorageService storageService = new StorageService(new Node("-1", 100));
+        StorageService storageService = new StorageService(new Node("-1", 100, "a"));
         File directory = new File(storageService.getValueFilesDirectory());
         if(directory.exists()){
             File[] files = directory.listFiles();
@@ -28,7 +28,7 @@ class StorageServiceTest {
 
     @Test
     void testGetPut() throws IOException {
-        StorageService storageService = new StorageService(new Node("-1", 100));
+        StorageService storageService = new StorageService(new Node("-1", 100, "a"));
         storageService.put("key", new byte[]{1, 2, 3});
         assertArrayEquals(new byte[]{1, 2, 3}, storageService.get("key"));
 
@@ -38,7 +38,7 @@ class StorageServiceTest {
 
     @Test
     void testDelete() throws IOException {
-        StorageService storageService = new StorageService(new Node("-1", 100));
+        StorageService storageService = new StorageService(new Node("-1", 100, "a"));
         storageService.put("key", new byte[]{1, 2, 3});
         assertTrue(new File(storageService.getValueFilePath("key")).exists());
         storageService.delete("key");
