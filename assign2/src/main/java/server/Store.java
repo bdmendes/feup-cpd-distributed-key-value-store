@@ -8,11 +8,14 @@ import message.messagereader.MessageReader;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Store {
     public static void bindRmiMethods(MembershipService membershipService){
@@ -55,25 +58,36 @@ public class Store {
 
         ExecutorService executorService = Executors.newFixedThreadPool(4);
 
-        // TCP LISTENER
-        // ADD UDP THREAD TO PROCESS MULTICAST JOINS AND LEAVES
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                Registry registry = LocateRegistry.getRegistry();
+                registry.unbind("reg" + membershipService.getStorageService().getNode().id());
+                executorService.shutdown();
+                executorService.awaitTermination(5, TimeUnit.SECONDS);
+            } catch (InterruptedException | RemoteException | NotBoundException e) {
+                System.err.println("Could not shutdown executor service");
+                e.printStackTrace();
+            }
+        }));
+
         try (ServerSocket serverSocket = new ServerSocket(storePort)) {
             System.out.println("Store server is running on port " + storePort);
 
-            Socket clientSocket = serverSocket.accept();
-            System.out.println("Got connection from client");
-            BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+            while (true) {
+                Socket clientSocket = serverSocket.accept();
+                System.out.println("Got connection from client");
+                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
 
-            MessageReader messageReader = new MessageReader();
+                MessageReader messageReader = new MessageReader();
 
-            while(!messageReader.isComplete()) {
-                messageReader.read(in);
+                while (!messageReader.isComplete()) {
+                    messageReader.read(in);
+                }
+
+                Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
+                MessageProcessor processor = new MessageProcessor(membershipService, message, clientSocket);
+                executorService.execute(processor);
             }
-
-            Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-            MessageProcessor processor = new MessageProcessor(membershipService, message, clientSocket);
-            executorService.execute(processor);
         }
-        executorService.shutdown();
     }
 }
