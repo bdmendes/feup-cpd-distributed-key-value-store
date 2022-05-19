@@ -31,7 +31,6 @@ public class MembershipService implements MembershipRMI {
         this.membershipLog = MembershipLog.generateMembershipLog();
         this.serverSocket = new ServerSocket(ipMulticastGroup.getPort());
         clusterNodes = ConcurrentHashMap.newKeySet();
-        clusterNodes.add(storageService.getNode());
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
     }
@@ -124,6 +123,7 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 != 0) {
             return false;
         }
+        clusterNodes.add(storageService.getNode());
         return this.multicastJoinLeave(serverSocket);
     }
 
@@ -132,6 +132,7 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 == 0) {
             return false;
         }
+        clusterNodes.remove(storageService.getNode());
         return this.multicastJoinLeave(serverSocket);
     }
 

@@ -1,14 +1,14 @@
 package server;
 
 import communication.IPAddress;
+import message.MembershipMessage;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -98,5 +98,92 @@ public class MembershipServiceTest {
         for (int i = 0; i < 32; i++) {
             assertEquals(valuesList.get(i), i + 8);
         }
+    }
+
+    @Test
+    void testMembershipMergeNewNode() throws IOException {
+        StorageService storageService = new StorageService(new Node("-1", -1));
+        MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
+        membershipService.getClusterNodes().add(new Node("1", -1));
+        membershipService.addMembershipEvent("1", 0);
+
+        Set<Node> messageNodes = new HashSet<>();
+        messageNodes.add(new Node("1", -1));
+        messageNodes.add(new Node("2", -1));
+        Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("1", 0);
+        messageEvents.put("2", 0);
+        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+
+        MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
+        messageProcessor.processMembership(membershipMessage, null);
+        assertEquals(membershipService.getMembershipLog().size(), 2);
+        assertEquals(membershipService.getMembershipLog().get("2"), 0);
+    }
+
+    @Test
+    void testMembershipMergeKnownNodeLeft() throws IOException {
+        StorageService storageService = new StorageService(new Node("-1", -1));
+        MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
+        membershipService.getClusterNodes().add(new Node("1", -1));
+        membershipService.getClusterNodes().add(new Node("2", -1));
+        membershipService.addMembershipEvent("1", 0);
+        membershipService.addMembershipEvent("2", 0);
+
+        Set<Node> messageNodes = new HashSet<>();
+        messageNodes.add(new Node("1", -1));
+        Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("1", 0);
+        messageEvents.put("2", 1);
+        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+
+        MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
+        messageProcessor.processMembership(membershipMessage, null);
+        assertEquals(membershipService.getClusterNodes().size(), 1);
+        assertEquals(membershipService.getMembershipLog().get("2"), 1);
+    }
+
+    @Test
+    void testMembershipMergeKnownNodeJoined() throws IOException {
+        StorageService storageService = new StorageService(new Node("-1", -1));
+        MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
+        membershipService.getClusterNodes().add(new Node("1", -1));
+        membershipService.addMembershipEvent("1", 0);
+        membershipService.addMembershipEvent("2", 1);
+
+        Set<Node> messageNodes = new HashSet<>();
+        messageNodes.add(new Node("1", -1));
+        messageNodes.add(new Node("2", -1));
+        Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("1", 0);
+        messageEvents.put("2", 2);
+        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+
+        MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
+        messageProcessor.processMembership(membershipMessage, null);
+        assertEquals(membershipService.getClusterNodes().size(), 2);
+        assertEquals(membershipService.getMembershipLog().get("2"), 2);
+    }
+
+    @Test
+    void testMembershipMergeOlderNodeEvent() throws IOException {
+        StorageService storageService = new StorageService(new Node("-1", -1));
+        MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
+        membershipService.getClusterNodes().add(new Node("1", -1));
+        membershipService.getClusterNodes().add(new Node("2", -1));
+        membershipService.addMembershipEvent("1", 0);
+        membershipService.addMembershipEvent("2", 2);
+
+        Set<Node> messageNodes = new HashSet<>();
+        messageNodes.add(new Node("1", -1));
+        Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("1", 0);
+        messageEvents.put("2", 1);
+        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+
+        MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
+        messageProcessor.processMembership(membershipMessage, null);
+        assertEquals(membershipService.getClusterNodes().size(), 2);
+        assertEquals(membershipService.getMembershipLog().get("2"), 2);
     }
 }

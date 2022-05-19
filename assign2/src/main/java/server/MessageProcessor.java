@@ -6,6 +6,8 @@ import message.*;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
+import java.util.Map;
+import java.util.Optional;
 
 public class MessageProcessor implements Runnable, MessageVisitor {
     private final MembershipService membershipService;
@@ -104,10 +106,25 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     }
 
     @Override
-    public void processMembership(MembershipMessage membershipMessage, Socket socket) {
-        // update my membership view using Moodle's merge algorithm (in the forum)
-        // deixa a magia acontecer
-        //MembershipService.doEverything(true);
+    public void processMembership(MembershipMessage membershipMessage, Socket dummy) {
+        for (Map.Entry<String, Integer> entry : membershipMessage.getMembershipLog().entrySet()) {
+            String nodeId = entry.getKey();
+            Integer membershipCounter = entry.getValue();
+            boolean containsEventFromNode = this.membershipService.getMembershipLog().containsKey(nodeId);
+            boolean newerThanLocalEvent = containsEventFromNode
+                    && this.membershipService.getMembershipLog().get(nodeId) < membershipCounter;
+            if (!containsEventFromNode || newerThanLocalEvent) {
+                this.membershipService.addMembershipEvent(nodeId, membershipCounter);
+                boolean nodeJoined = membershipCounter % 2 == 0;
+                if (nodeJoined) {
+                    Optional<Node> node = membershipMessage.getNodes().stream().filter(n -> n.id().equals(nodeId)).findFirst();
+                    if (node.isEmpty()) continue;
+                    this.membershipService.getClusterNodes().add(node.get());
+                } else {
+                    this.membershipService.getClusterNodes().removeIf(n -> n.id().equals(nodeId));
+                }
+            }
+        }
     }
 
     @Override
