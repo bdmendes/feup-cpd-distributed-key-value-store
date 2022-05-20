@@ -1,16 +1,12 @@
 package server;
 
 import communication.IPAddress;
-import communication.MessageReceiver;
-import communication.MessageSender;
-import communication.MulticastSender;
+import communication.MulticastHandler;
 import message.*;
 import utils.MembershipLog;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -24,12 +20,13 @@ public class MembershipService implements MembershipRMI {
     private final Set<Node> clusterNodes;
     private final IPAddress ipMulticastGroup;
     private final ServerSocket serverSocket;
+    private MulticastHandler multicastHandler;
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.membershipLog = MembershipLog.generateMembershipLog();
-        this.serverSocket = new ServerSocket(ipMulticastGroup.getPort());
+        this.serverSocket = new ServerSocket(0);
         clusterNodes = ConcurrentHashMap.newKeySet();
         clusterNodes.add(storageService.getNode());
         this.readMembershipCounterFromFile();
@@ -101,21 +98,21 @@ public class MembershipService implements MembershipRMI {
         message.setCounter(nodeMembershipCounter.get());
         message.setNodeId(storageService.getNode().id());
         incrementCounter();
-        MulticastSender multicastSender = new MulticastSender(message, ipMulticastGroup);
-        MessageReceiver messageReceiver = new MessageReceiver(serverSocket, 200);
-        multicastSender.sendMessage();
-        for (int i = 0; i < 3; i++){
-            Message receivedMessage = messageReceiver.receiveMessage();
-            if (receivedMessage == null) {
-                if (i == 2){
-                    return true;
-                }
-                multicastSender.sendMessage();
-                continue;
-            }
-            MessageProcessor processor = new MessageProcessor(this, receivedMessage, null);
-            processor.run();
-        }
+        multicastHandler.sendMessage(message);
+//        MessageReceiver messageReceiver = new MessageReceiver(serverSocket, 200);
+//        multicastSender.sendMessage();
+//        for (int i = 0; i < 3; i++){
+//            Message receivedMessage = messageReceiver.receiveMessage();
+//            if (receivedMessage == null) {
+//                if (i == 2){
+//                    return true;
+//                }
+//                multicastSender.sendMessage();
+//                continue;
+//            }
+//            MessageProcessor processor = new MessageProcessor(this, receivedMessage, null);
+//            processor.run();
+//        }
         return true;
     }
 
@@ -124,7 +121,24 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 != 0) {
             return false;
         }
-        return this.multicastJoinLeave(serverSocket);
+
+        multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup);
+        boolean result;
+
+        try {
+            result = this.multicastJoinLeave(serverSocket);
+        } catch (IOException e) {
+            result = false;
+        }
+
+        if(result) {
+            Thread multicastHandlerThread = new Thread(multicastHandler);
+            multicastHandlerThread.start();
+        } else {
+            multicastHandler.close();
+        }
+
+        return result;
     }
 
     @Override
@@ -132,7 +146,19 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 == 0) {
             return false;
         }
-        return this.multicastJoinLeave(serverSocket);
+        boolean result;
+
+        try {
+            result = this.multicastJoinLeave(serverSocket);
+        } catch (IOException e) {
+            result = false;
+        }
+
+        if(result) {
+            multicastHandler.close();
+        }
+
+        return result;
     }
 
     public int getNodeMembershipCounter() {

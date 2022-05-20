@@ -6,8 +6,7 @@ import message.MessageFactory;
 import message.messagereader.MessageReader;
 
 import java.io.*;
-import java.net.ServerSocket;
-import java.net.Socket;
+import java.net.*;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -24,6 +23,15 @@ public class Store {
             Registry registry = LocateRegistry.getRegistry();
             registry.bind("reg" + membershipService.getStorageService().getNode().id(), stub);
             System.err.println("Server ready for RMI operations");
+
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    registry.unbind("reg" + membershipService.getStorageService().getNode().id());
+                } catch ( RemoteException | NotBoundException e) {
+                    System.err.println("Could not shutdown executor service");
+                    e.printStackTrace();
+                }
+            }));
         } catch (Exception e) {
             System.err.println("Could not bind membership service stub to RMI registry: " + e);
             e.printStackTrace();
@@ -58,20 +66,18 @@ public class Store {
 
         ExecutorService executorService = Executors.newFixedThreadPool(4);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                Registry registry = LocateRegistry.getRegistry();
-                registry.unbind("reg" + membershipService.getStorageService().getNode().id());
-                executorService.shutdown();
-                executorService.awaitTermination(5, TimeUnit.SECONDS);
-            } catch (InterruptedException | RemoteException | NotBoundException e) {
-                System.err.println("Could not shutdown executor service");
-                e.printStackTrace();
-            }
-        }));
+        try (ServerSocket serverSocket = new ServerSocket()) {
+            serverSocket.bind(new InetSocketAddress(nodeId, storePort));
+            System.out.println("Store server is running on " + nodeId + ":" + storePort);
 
-        try (ServerSocket serverSocket = new ServerSocket(storePort)) {
-            System.out.println("Store server is running on port " + storePort);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    executorService.shutdown();
+                    executorService.awaitTermination(5, TimeUnit.SECONDS);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            }));
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
