@@ -2,10 +2,9 @@ package server;
 
 import communication.MessageSender;
 import message.*;
+import message.messagereader.MessageReader;
 
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.util.Map;
 import java.util.Optional;
@@ -14,23 +13,48 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     private final MembershipService membershipService;
     private final StorageService storageService;
     private final Message message;
-    private final Socket socket;
+    private final Socket clientSocket;
 
     MessageProcessor(MembershipService membershipService, Message message, Socket socket) {
         this.message = message;
         this.storageService = membershipService.getStorageService();
         this.membershipService = membershipService;
-        this.socket = socket;
+        this.clientSocket = socket;
     }
 
     @Override
     public void run() {
         try {
-            process(this.message, this.socket);
+            process(this.message, this.clientSocket);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    };
+    }
+
+    private void sendMessage(Message message, Socket socket) throws IOException {
+        DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+        dataOutputStream.write(message.encode());
+        dataOutputStream.flush();
+    }
+
+    private Message readMessage(Socket socket) throws IOException {
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+        MessageReader messageReader = new MessageReader();
+        while (!messageReader.isComplete()) {
+            messageReader.read(bufferedReader);
+        }
+        return MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
+    }
+
+    private void dispatchMessageToResponsibleNode(Node responsibleNode, Message message, Socket clientSocket) {
+        try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
+            this.sendMessage(message, responsibleNodeSocket);
+            Message replyMessage = this.readMessage(responsibleNodeSocket);
+            this.sendMessage(replyMessage, clientSocket);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not request operation to responsible node");
+        }
+    }
 
     @Override
     public void processPut(PutMessage putMessage, Socket clientSocket) {
@@ -52,15 +76,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 throw new RuntimeException("Could not send put reply");
             }
         } else {
-            try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
-                DataOutputStream dataOutputStream = new DataOutputStream(responsibleNodeSocket.getOutputStream());
-                dataOutputStream.write(putMessage.encode());
-                dataOutputStream.flush();
-                // read put reply
-                // send put reply to the client
-            } catch (IOException e) {
-                throw new RuntimeException("Could not request put operation to responsible node");
-            }
+            this.dispatchMessageToResponsibleNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -86,15 +102,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 throw new RuntimeException("Could not send get reply");
             }
         } else {
-            try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
-                DataOutputStream dataOutputStream = new DataOutputStream(responsibleNodeSocket.getOutputStream());
-                dataOutputStream.write(getMessage.encode());
-                dataOutputStream.flush();
-                // read get reply
-                // send get reply to the client
-            } catch (IOException e) {
-                throw new RuntimeException("Could not request get operation to responsible node");
-            }
+            this.dispatchMessageToResponsibleNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -117,15 +125,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 throw new RuntimeException("Could not send delete reply");
             }
         } else {
-            try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
-                DataOutputStream dataOutputStream = new DataOutputStream(responsibleNodeSocket.getOutputStream());
-                dataOutputStream.write(deleteMessage.encode());
-                dataOutputStream.flush();
-                // read get reply
-                // send get reply to the client
-            } catch (IOException e) {
-                throw new RuntimeException("Could not request get operation to responsible node");
-            }
+            this.dispatchMessageToResponsibleNode(responsibleNode, message, clientSocket);
         }
     }
 
