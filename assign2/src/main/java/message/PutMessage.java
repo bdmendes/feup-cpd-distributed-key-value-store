@@ -8,8 +8,7 @@ public class PutMessage extends Message {
     private String key;
     private byte[] value;
 
-    public PutMessage() {
-    }
+    public PutMessage() {}
 
     public PutMessage(String headers, byte[] data) {
         Map<String, String> fields = decodeFields(headers);

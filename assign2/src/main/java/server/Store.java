@@ -21,7 +21,7 @@ public class Store {
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind("reg" + membershipService.getStorageService().getNode().id(), stub);
+            registry.rebind("reg" + membershipService.getStorageService().getNode().id(), stub);
             System.err.println("Server ready for RMI operations");
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

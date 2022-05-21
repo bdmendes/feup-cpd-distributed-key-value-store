@@ -12,21 +12,18 @@ import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
     private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
-    private final Map<String, Integer> membershipLog;
-    private final Set<Node> clusterNodes;
+    private final Map<String, Integer> membershipLog = MembershipLog.generateMembershipLog();
+    private final ClusterMap clusterMap = new ClusterMap();
     private final IPAddress ipMulticastGroup;
     private MulticastHandler multicastHandler;
 
     protected MembershipService(StorageService storageService) {
         this.storageService = storageService;
-        membershipLog = MembershipLog.generateMembershipLog();
-        clusterNodes = ConcurrentHashMap.newKeySet();
         ipMulticastGroup = null;
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
@@ -35,9 +32,6 @@ public class MembershipService implements MembershipRMI {
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
-        this.membershipLog = MembershipLog.generateMembershipLog();
-        clusterNodes = ConcurrentHashMap.newKeySet();
-        clusterNodes.add(storageService.getNode());
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
 
@@ -52,8 +46,8 @@ public class MembershipService implements MembershipRMI {
         return storageService;
     }
 
-    public Set<Node> getClusterNodes() {
-        return clusterNodes;
+    public ClusterMap getClusterMap() {
+        return clusterMap;
     }
 
     public IPAddress getIpMulticastGroup() {
@@ -131,7 +125,6 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
-
         multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
         ServerSocket serverSocket = new ServerSocket();
         serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
@@ -142,6 +135,8 @@ public class MembershipService implements MembershipRMI {
         Thread messageReceiverThread = new Thread(messageReceiver);
         messageReceiverThread.start();
 
+        int counter = nodeMembershipCounter.get();
+
         try {
             this.multicastJoinLeave(serverSocket.getLocalPort());
         } catch (IOException e) {
@@ -151,20 +146,12 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
-//        MessageReceiver messageReceiver = new MessageReceiver(serverSocket, 200);
-//        multicastSender.sendMessage();
-//        for (int i = 0; i < 3; i++){
-//            Message receivedMessage = messageReceiver.receiveMessage();
-//            if (receivedMessage == null) {
-//                if (i == 2){
-//                    return true;
-//                }
-//                multicastSender.sendMessage();
-//                continue;
-//            }
-//            MessageProcessor processor = new MessageProcessor(this, receivedMessage, null);
-//            processor.run();
-//        }
+        clusterMap.add(storageService.getNode());
+        addMembershipEvent(storageService.getNode().id(), counter);
+
+        System.out.println(this.getClusterMap().getNodes());
+        System.out.println(this.getMembershipLog());
+
         Thread multicastHandlerThread = new Thread(multicastHandler);
         multicastHandlerThread.start();
 
@@ -177,6 +164,8 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
+        int counter = nodeMembershipCounter.get();
+
         try {
             this.multicastJoinLeave(-1);
         } catch (IOException e) {
@@ -185,6 +174,15 @@ public class MembershipService implements MembershipRMI {
         }
 
         multicastHandler.close();
+
+        clusterMap.remove(storageService.getNode());
+        addMembershipEvent(storageService.getNode().id(), counter);
+
+        System.out.println(this.getClusterMap().getNodes());
+        System.out.println(this.getMembershipLog());
+        
+        // TRANSFER ALL MY KEYS TO MY SUCCESSOR
+
         return true;
     }
 
