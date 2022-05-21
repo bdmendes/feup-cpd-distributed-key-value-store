@@ -9,7 +9,7 @@ public class ClusterMap {
     private final Map<String, Node> clusterNodes;
 
     public ClusterMap() {
-        this.clusterNodes = Collections.synchronizedMap(new TreeMap<>());
+        this.clusterNodes = Collections.synchronizedSortedMap(new TreeMap<>());
     }
 
     public Set<Node> getNodes() {

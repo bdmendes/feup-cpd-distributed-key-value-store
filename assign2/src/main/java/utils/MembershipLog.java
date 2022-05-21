@@ -8,7 +8,7 @@ import java.util.*;
 
 public class MembershipLog {
     public static Map<String, Integer> generateMembershipLog() {
-        return Collections.synchronizedMap(new LinkedHashMap<String, Integer>(
+        return Collections.synchronizedMap(new LinkedHashMap<>(
                 32, .75f, true) {
             @Override
             protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
