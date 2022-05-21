@@ -3,6 +3,7 @@ package server;
 import communication.MessageSender;
 import message.*;
 
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.Socket;
@@ -32,76 +33,99 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     };
 
     @Override
-    public void processPut(PutMessage putMessage, Socket socket) {
-        // FIND NODE TO STORE KEY/VALUE PAIR
-
-        // IF IS THE CORRECT NODE - THEN STORE KEY/VALUE PAIR:
-        PutReply response = new PutReply();
-        response.setKey(putMessage.getKey());
-
-        try {
-            storageService.put(putMessage.getKey(), putMessage.getValue());
-            response.setStatusCode(StatusCode.OK);
-        } catch (IOException e) {
-            response.setStatusCode(StatusCode.ERROR);
-        }
-
-        try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send put reply");
+    public void processPut(PutMessage putMessage, Socket clientSocket) {
+        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
+        if (responsibleNode.equals(this.storageService.getNode())) {
+            PutReply response = new PutReply();
+            response.setKey(putMessage.getKey());
+            try {
+                storageService.put(putMessage.getKey(), putMessage.getValue());
+                response.setStatusCode(StatusCode.OK);
+            } catch (IOException e) {
+                response.setStatusCode(StatusCode.ERROR);
+            }
+            try {
+                OutputStream outputStream = clientSocket.getOutputStream();
+                outputStream.write(response.encode());
+                outputStream.flush();
+            } catch (IOException e) {
+                throw new RuntimeException("Could not send put reply");
+            }
+        } else {
+            try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
+                DataOutputStream dataOutputStream = new DataOutputStream(responsibleNodeSocket.getOutputStream());
+                dataOutputStream.write(putMessage.encode());
+                dataOutputStream.flush();
+                // read put reply
+                // send put reply to the client
+            } catch (IOException e) {
+                throw new RuntimeException("Could not request put operation to responsible node");
+            }
         }
     }
 
     @Override
     public void processGet(GetMessage getMessage, Socket socket) {
-        // FIND NODE TO STORE KEY/VALUE PAIR
-
-        // IF IS THE CORRECT NODE - THEN GET KEY/VALUE PAIR:
-        GetReply response = new GetReply();
-        response.setKey(getMessage.getKey());
-
-        try {
-            byte[] value = storageService.get(getMessage.getKey());
-
-            response.setValue(value);
-            response.setStatusCode(StatusCode.OK);
-
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
-        } catch (IOException e) {
-            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
-        }
-
-        try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send get reply");
+        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
+        if (responsibleNode.equals(this.storageService.getNode())) {
+            GetReply response = new GetReply();
+            response.setKey(getMessage.getKey());
+            try {
+                byte[] value = storageService.get(getMessage.getKey());
+                response.setValue(value);
+                response.setStatusCode(StatusCode.OK);
+                OutputStream outputStream = socket.getOutputStream();
+                outputStream.write(response.encode());
+            } catch (IOException e) {
+                response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+            }
+            try {
+                OutputStream outputStream = socket.getOutputStream();
+                outputStream.write(response.encode());
+            } catch (IOException e) {
+                throw new RuntimeException("Could not send get reply");
+            }
+        } else {
+            try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
+                DataOutputStream dataOutputStream = new DataOutputStream(responsibleNodeSocket.getOutputStream());
+                dataOutputStream.write(getMessage.encode());
+                dataOutputStream.flush();
+                // read get reply
+                // send get reply to the client
+            } catch (IOException e) {
+                throw new RuntimeException("Could not request get operation to responsible node");
+            }
         }
     }
 
     @Override
     public void processDelete(DeleteMessage deleteMessage, Socket socket) {
-        // FIND NODE TO DELETE KEY/VALUE PAIR
-
-        // IF IS THE CORRECT NODE - THEN DELETE KEY/VALUE PAIR:
-        boolean deleted = storageService.delete(deleteMessage.getKey());
-        DeleteReply response = new DeleteReply();
-        response.setKey(deleteMessage.getKey());
-
-        if (!deleted) {
-            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(deleteMessage.getKey());
+        if (responsibleNode.equals(this.storageService.getNode())) {
+            boolean deleted = storageService.delete(deleteMessage.getKey());
+            DeleteReply response = new DeleteReply();
+            response.setKey(deleteMessage.getKey());
+            if (!deleted) {
+                response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+            } else {
+                response.setStatusCode(StatusCode.OK);
+            }
+            try {
+                OutputStream outputStream = socket.getOutputStream();
+                outputStream.write(response.encode());
+            } catch (IOException e) {
+                throw new RuntimeException("Could not send delete reply");
+            }
         } else {
-            response.setStatusCode(StatusCode.OK);
-        }
-
-        try {
-            OutputStream outputStream = socket.getOutputStream();
-            outputStream.write(response.encode());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send delete reply");
+            try (Socket responsibleNodeSocket = new Socket(responsibleNode.id(), responsibleNode.port())){
+                DataOutputStream dataOutputStream = new DataOutputStream(responsibleNodeSocket.getOutputStream());
+                dataOutputStream.write(deleteMessage.encode());
+                dataOutputStream.flush();
+                // read get reply
+                // send get reply to the client
+            } catch (IOException e) {
+                throw new RuntimeException("Could not request get operation to responsible node");
+            }
         }
     }
 
