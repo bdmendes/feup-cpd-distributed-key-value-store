@@ -107,6 +107,13 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket dummy) {
+        for (Node node : membershipMessage.getNodes()) {
+            boolean loggedRecently = this.membershipService.getMembershipLog().containsKey(node.id());
+            if (!loggedRecently) {
+                this.membershipService.getClusterMap().add(node);
+            }
+        }
+
         for (Map.Entry<String, Integer> entry : membershipMessage.getMembershipLog().entrySet()) {
             String nodeId = entry.getKey();
             Integer membershipCounter = entry.getValue();
