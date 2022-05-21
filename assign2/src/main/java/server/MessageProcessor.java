@@ -5,12 +5,10 @@ import message.messagereader.MessageReader;
 import utils.StoreUtils;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.Random;
 import java.io.*;
-import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map;
@@ -108,7 +106,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             System.out.println(this.membershipService.getClusterMap().getNodes());
             System.out.println(this.membershipService.getMembershipLog());
 
-            try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getPort())) {
+            try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
                 Thread.sleep(new Random().nextInt(500));
 
                 MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterMap().getNodes(),

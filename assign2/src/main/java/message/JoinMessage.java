@@ -7,6 +7,7 @@ import java.util.Map;
 public class JoinMessage extends Message {
     private String nodeId;
     private int counter;
+    private int connectionPort;
     private int port;
 
     public JoinMessage() {}
@@ -15,6 +16,7 @@ public class JoinMessage extends Message {
         Map<String, String> fields = decodeFields(header);
         this.nodeId = fields.get("nodeId");
         this.counter = Integer.parseInt(fields.get("counter"));
+        this.connectionPort = Integer.parseInt(fields.get("connectionPort"));
         this.port = Integer.parseInt(fields.get("port"));
     }
 
@@ -34,6 +36,14 @@ public class JoinMessage extends Message {
         return counter;
     }
 
+    public void setConnectionPort(int connectionPort) {
+        this.connectionPort = connectionPort;
+    }
+
+    public int getConnectionPort() {
+        return connectionPort;
+    }
+
     public void setPort(int port) {
         this.port = port;
     }
@@ -47,6 +57,7 @@ public class JoinMessage extends Message {
         Map<String, String> fields = new HashMap<>();
         fields.put("nodeId", this.nodeId);
         fields.put("counter", Integer.toString(counter));
+        fields.put("connectionPort", Integer.toString(connectionPort));
         fields.put("port", Integer.toString(port));
         return encodeWithFields(MessageType.JOIN, fields, new byte[]{});
     }

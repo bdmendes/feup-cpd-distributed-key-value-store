@@ -109,7 +109,8 @@ public class MembershipService implements MembershipRMI {
         JoinMessage joinMessage = new JoinMessage();
         joinMessage.setCounter(nodeMembershipCounter.get());
         joinMessage.setNodeId(storageService.getNode().id());
-        joinMessage.setPort(port);
+        joinMessage.setConnectionPort(port);
+        joinMessage.setPort(storageService.getNode().port());
         return joinMessage;
     }
 
@@ -164,8 +165,6 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
-        int counter = nodeMembershipCounter.get();
-
         try {
             this.multicastJoinLeave(-1);
         } catch (IOException e) {
@@ -175,8 +174,8 @@ public class MembershipService implements MembershipRMI {
 
         multicastHandler.close();
 
-        clusterMap.remove(storageService.getNode());
-        addMembershipEvent(storageService.getNode().id(), counter);
+        clusterMap.clear();
+        clearMembershipLog();
 
         System.out.println(this.getClusterMap().getNodes());
         System.out.println(this.getMembershipLog());
@@ -201,6 +200,11 @@ public class MembershipService implements MembershipRMI {
 
     protected void addMembershipEvent(String nodeId, int membershipCounter){
         membershipLog.put(nodeId, membershipCounter);
+        this.writeMembershipLogToFile();
+    }
+
+    protected void clearMembershipLog(){
+        membershipLog.clear();
         this.writeMembershipLogToFile();
     }
 

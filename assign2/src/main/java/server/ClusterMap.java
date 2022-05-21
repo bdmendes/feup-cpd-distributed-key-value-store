@@ -32,6 +32,10 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(id.getBytes(StandardCharsets.UTF_8)));
     }
 
+    public void clear() {
+        clusterNodes.clear();
+    }
+
     public Node getNodeSuccessor(Node node) {
         String nodeHash = StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8));
         return this.getNodeSuccessor(nodeHash);
