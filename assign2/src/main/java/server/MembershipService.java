@@ -1,11 +1,14 @@
 package server;
 
 import communication.IPAddress;
+import communication.MessageReceiver;
 import communication.MulticastHandler;
 import message.*;
 import utils.MembershipLog;
 
 import java.io.*;
+import java.lang.reflect.Member;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,18 +22,31 @@ public class MembershipService implements MembershipRMI {
     private final Map<String, Integer> membershipLog;
     private final Set<Node> clusterNodes;
     private final IPAddress ipMulticastGroup;
-    private final ServerSocket serverSocket;
     private MulticastHandler multicastHandler;
+
+    protected MembershipService(StorageService storageService) {
+        this.storageService = storageService;
+        membershipLog = MembershipLog.generateMembershipLog();
+        clusterNodes = ConcurrentHashMap.newKeySet();
+        ipMulticastGroup = null;
+        this.readMembershipCounterFromFile();
+        this.readMembershipLogFromFile();
+    }
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.membershipLog = MembershipLog.generateMembershipLog();
-        this.serverSocket = new ServerSocket(0);
         clusterNodes = ConcurrentHashMap.newKeySet();
         clusterNodes.add(storageService.getNode());
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
+
+        if(nodeMembershipCounter.get() % 2 != 0) {
+            multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
+            Thread multicastHandlerThread = new Thread(multicastHandler);
+            multicastHandlerThread.start();
+        }
     }
 
     public StorageService getStorageService() {
@@ -50,9 +66,12 @@ public class MembershipService implements MembershipRMI {
     }
 
     protected void readMembershipCounterFromFile() {
+        int counter;
         try {
             Scanner scanner = new Scanner(new File(getMembershipCounterFilePath()));
-            nodeMembershipCounter.set(scanner.nextInt());
+            counter = scanner.nextInt();
+            nodeMembershipCounter.set(counter);
+
             scanner.close();
         } catch (Exception e) {
             nodeMembershipCounter.set(0);
@@ -93,12 +112,37 @@ public class MembershipService implements MembershipRMI {
         //
     }
 
-    private boolean multicastJoinLeave(ServerSocket serverSocket) throws IOException {
+    private void multicastJoinLeave(int port) throws IOException {
         JoinMessage message = new JoinMessage();
         message.setCounter(nodeMembershipCounter.get());
         message.setNodeId(storageService.getNode().id());
-        incrementCounter();
+        message.setPort(port);
         multicastHandler.sendMessage(message);
+        incrementCounter();
+    }
+
+    @Override
+    public boolean join() throws IOException {
+        if (nodeMembershipCounter.get() % 2 != 0) {
+            return false;
+        }
+
+        multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
+        ServerSocket serverSocket = new ServerSocket();
+        serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
+
+        MessageReceiver messageReceiver = new MessageReceiver(this, serverSocket, 1200);
+        Thread messageReceiverThread = new Thread(messageReceiver);
+        messageReceiverThread.start();
+
+        try {
+            this.multicastJoinLeave(serverSocket.getLocalPort());
+        } catch (IOException e) {
+            e.printStackTrace();
+            multicastHandler.close();
+            return false;
+        }
+
 //        MessageReceiver messageReceiver = new MessageReceiver(serverSocket, 200);
 //        multicastSender.sendMessage();
 //        for (int i = 0; i < 3; i++){
@@ -113,32 +157,10 @@ public class MembershipService implements MembershipRMI {
 //            MessageProcessor processor = new MessageProcessor(this, receivedMessage, null);
 //            processor.run();
 //        }
+        Thread multicastHandlerThread = new Thread(multicastHandler);
+        multicastHandlerThread.start();
+
         return true;
-    }
-
-    @Override
-    public boolean join() throws IOException {
-        if (nodeMembershipCounter.get() % 2 != 0) {
-            return false;
-        }
-
-        multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup);
-        boolean result;
-
-        try {
-            result = this.multicastJoinLeave(serverSocket);
-        } catch (IOException e) {
-            result = false;
-        }
-
-        if(result) {
-            Thread multicastHandlerThread = new Thread(multicastHandler);
-            multicastHandlerThread.start();
-        } else {
-            multicastHandler.close();
-        }
-
-        return result;
     }
 
     @Override
@@ -146,19 +168,16 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 == 0) {
             return false;
         }
-        boolean result;
 
         try {
-            result = this.multicastJoinLeave(serverSocket);
+            this.multicastJoinLeave(-1);
         } catch (IOException e) {
-            result = false;
+            e.printStackTrace();
+            return false;
         }
 
-        if(result) {
-            multicastHandler.close();
-        }
-
-        return result;
+        multicastHandler.close();
+        return true;
     }
 
     public int getNodeMembershipCounter() {

@@ -1,23 +1,30 @@
 package communication;
 
-import message.Message;
+import message.*;
+import server.MembershipService;
+import server.MessageProcessor;
 import server.Node;
 
 import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MulticastHandler implements Runnable {
     private final MulticastSocket socket;
+    private final MembershipService membershipService;
     private final InetSocketAddress multicastAddress;
     private final NetworkInterface networkInterface;
     private boolean running = true;
     private static final int MAX_BUF_LEN = 2000;
 
-    public MulticastHandler(Node node, IPAddress multicastAddress) throws IOException {
+    public MulticastHandler(Node node, IPAddress multicastAddress, MembershipService service) throws IOException {
         InetAddress address  = InetAddress.getByName(node.id());
         networkInterface = NetworkInterface.getByInetAddress(address);
         this.multicastAddress = new InetSocketAddress(multicastAddress.getIp(), multicastAddress.getPort());
+        this.membershipService = service;
 
         socket = new MulticastSocket(multicastAddress.getPort());
         socket.setNetworkInterface(networkInterface);
@@ -25,14 +32,10 @@ public class MulticastHandler implements Runnable {
         socket.joinGroup(this.multicastAddress, networkInterface);
     }
 
-    public void sendMessage(Message message) {
+    public void sendMessage(Message message) throws IOException {
         byte[] bytes = message.encode();
         DatagramPacket packet = new DatagramPacket(bytes, bytes.length, multicastAddress);
-        try {
-            socket.send(packet);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        socket.send(packet);
     }
 
     public void close() throws IOException {
@@ -43,12 +46,23 @@ public class MulticastHandler implements Runnable {
 
     @Override
     public void run() {
+        ExecutorService executorService = Executors.newFixedThreadPool(4);
+
         while(running) {
             byte[] buffer = new byte[MAX_BUF_LEN];
             DatagramPacket datagramPacket = new DatagramPacket(buffer, MAX_BUF_LEN);
             try {
                 socket.receive(datagramPacket);
-                System.out.println(new String(datagramPacket.getData()));
+
+                String stringBuffer = new String(buffer);
+                int index = stringBuffer.indexOf(MessageConstants.END_OF_LINE + MessageConstants.END_OF_LINE);
+                String headers = stringBuffer.substring(0, index);
+                byte[] body = stringBuffer.substring(index + MessageConstants.END_OF_LINE.length() * 2).getBytes();
+
+                Message message = MessageFactory.createMessage(headers, body);
+
+                MessageProcessor processor = new MessageProcessor(membershipService, message, null);
+                executorService.execute(processor);
             } catch (IOException e) {
                 if(running) {
                     throw new RuntimeException(e);

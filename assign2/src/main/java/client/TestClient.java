@@ -13,6 +13,9 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class TestClient {
     private record ClientArgs(String host, String operation, String operand) {

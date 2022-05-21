@@ -36,20 +36,25 @@ public class MembershipServiceTest {
 
     @Test
     void testGetPut() throws IOException {
+        MembershipService service;
+        MembershipService service2;
+        MembershipService service3;
+
         StorageService storageService = new StorageService(new Node("-1", -1));
-        MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
+        service = new MembershipService(storageService);
+
         service.incrementCounter();
         service.incrementCounter();
 
         assertEquals(2, service.getNodeMembershipCounter());
 
-        MembershipService service2 = new MembershipService(storageService, new IPAddress("", 0));
+        service2 = new MembershipService(storageService);
 
         assertEquals(2, service2.getNodeMembershipCounter());
 
         service2.incrementCounter();
 
-        MembershipService service3 = new MembershipService(storageService, new IPAddress("", 0));
+        service3 = new MembershipService(storageService);
         assertEquals(3, service3.getNodeMembershipCounter());
     }
 

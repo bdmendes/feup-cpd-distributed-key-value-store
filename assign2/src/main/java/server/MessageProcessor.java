@@ -5,7 +5,9 @@ import message.*;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.InetAddress;
 import java.net.Socket;
+import java.util.Random;
 
 public class MessageProcessor implements Runnable, MessageVisitor {
     private final MembershipService membershipService;
@@ -13,7 +15,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     private final Message message;
     private final Socket socket;
 
-    MessageProcessor(MembershipService membershipService, Message message, Socket socket) {
+    public MessageProcessor(MembershipService membershipService, Message message, Socket socket) {
         this.message = message;
         this.storageService = membershipService.getStorageService();
         this.membershipService = membershipService;
@@ -112,12 +114,23 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processJoin(JoinMessage joinMessage, Socket socket) {
-        membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
-        MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterNodes(), membershipService.getMembershipLog());
-        MessageSender messageSender = new MessageSender(socket);
-        try {
+        if(joinMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
+            System.out.println("I'm the new node");
+            return;
+        }
+        System.out.println("new node: " + joinMessage.getNodeId());
+
+        try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getPort())) {
+            membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
+
+            Thread.sleep(new Random().nextInt(500));
+
+            MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterNodes(), membershipService.getMembershipLog());
+            MessageSender messageSender = new MessageSender(otherNode);
             messageSender.sendMessage(membershipMessage);
-        } catch (IOException ignored) {}
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
