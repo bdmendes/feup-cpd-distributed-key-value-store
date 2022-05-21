@@ -129,6 +129,8 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processJoin(JoinMessage joinMessage, Socket socket) {
+        // TRANSFER KEYS IF I AM THE SUCCESSOR OF THIS NODE
+
         membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
         MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterNodes(), membershipService.getMembershipLog());
         MessageSender messageSender = new MessageSender(socket);

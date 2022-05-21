@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
     private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
-    private final Map<String, Integer> membershipLog;
+    private final Map<String, Integer> membershipLog = MembershipLog.generateMembershipLog();
     private final Set<Node> clusterNodes;
     private final IPAddress ipMulticastGroup;
     private final ServerSocket serverSocket;
@@ -28,7 +28,6 @@ public class MembershipService implements MembershipRMI {
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
-        this.membershipLog = MembershipLog.generateMembershipLog();
         this.serverSocket = new ServerSocket(ipMulticastGroup.getPort());
         clusterNodes = ConcurrentHashMap.newKeySet();
         this.readMembershipCounterFromFile();
@@ -124,6 +123,10 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
         clusterNodes.add(storageService.getNode());
+        addMembershipEvent(storageService.getNode().id(),
+                nodeMembershipCounter.get() == 0
+                        ? nodeMembershipCounter.getAndIncrement()
+                        : nodeMembershipCounter.incrementAndGet());
         return this.multicastJoinLeave(serverSocket);
     }
 
@@ -133,6 +136,7 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
         clusterNodes.remove(storageService.getNode());
+        addMembershipEvent(storageService.getNode().id(), nodeMembershipCounter.incrementAndGet());
         return this.multicastJoinLeave(serverSocket);
     }
 
