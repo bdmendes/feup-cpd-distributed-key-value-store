@@ -104,7 +104,7 @@ public class MembershipServiceTest {
     void testMembershipMergeNewNode() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterNodes().add(new Node("1", -1));
+        membershipService.getClusterMap().add(new Node("1", -1));
         membershipService.addMembershipEvent("1", 0);
 
         Set<Node> messageNodes = new HashSet<>();
@@ -117,6 +117,7 @@ public class MembershipServiceTest {
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
         assertEquals(membershipService.getMembershipLog().size(), 2);
         assertEquals(membershipService.getMembershipLog().get("2"), 0);
     }
@@ -125,8 +126,8 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeLeft() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterNodes().add(new Node("1", -1));
-        membershipService.getClusterNodes().add(new Node("2", -1));
+        membershipService.getClusterMap().add(new Node("1", -1));
+        membershipService.getClusterMap().add(new Node("2", -1));
         membershipService.addMembershipEvent("1", 0);
         membershipService.addMembershipEvent("2", 0);
 
@@ -139,7 +140,7 @@ public class MembershipServiceTest {
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
-        assertEquals(membershipService.getClusterNodes().size(), 1);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 1);
         assertEquals(membershipService.getMembershipLog().get("2"), 1);
     }
 
@@ -147,7 +148,7 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeJoined() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterNodes().add(new Node("1", -1));
+        membershipService.getClusterMap().add(new Node("1", -1));
         membershipService.addMembershipEvent("1", 0);
         membershipService.addMembershipEvent("2", 1);
 
@@ -161,7 +162,7 @@ public class MembershipServiceTest {
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
-        assertEquals(membershipService.getClusterNodes().size(), 2);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
         assertEquals(membershipService.getMembershipLog().get("2"), 2);
     }
 
@@ -169,8 +170,8 @@ public class MembershipServiceTest {
     void testMembershipMergeOlderNodeEvent() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterNodes().add(new Node("1", -1));
-        membershipService.getClusterNodes().add(new Node("2", -1));
+        membershipService.getClusterMap().add(new Node("1", -1));
+        membershipService.getClusterMap().add(new Node("2", -1));
         membershipService.addMembershipEvent("1", 0);
         membershipService.addMembershipEvent("2", 2);
 
@@ -183,7 +184,7 @@ public class MembershipServiceTest {
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
-        assertEquals(membershipService.getClusterNodes().size(), 2);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
         assertEquals(membershipService.getMembershipLog().get("2"), 2);
     }
 }

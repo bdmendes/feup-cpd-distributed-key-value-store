@@ -119,9 +119,9 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 if (nodeJoined) {
                     Optional<Node> node = membershipMessage.getNodes().stream().filter(n -> n.id().equals(nodeId)).findFirst();
                     if (node.isEmpty()) continue;
-                    this.membershipService.getClusterNodes().add(node.get());
+                    this.membershipService.getClusterMap().add(node.get());
                 } else {
-                    this.membershipService.getClusterNodes().removeIf(n -> n.id().equals(nodeId));
+                    this.membershipService.getClusterMap().removeId(nodeId);
                 }
             }
         }
@@ -132,7 +132,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         // TRANSFER KEYS IF I AM THE SUCCESSOR OF THIS NODE
 
         membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
-        MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterNodes(), membershipService.getMembershipLog());
+        MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterMap().getNodes(), membershipService.getMembershipLog());
         MessageSender messageSender = new MessageSender(socket);
         try {
             messageSender.sendMessage(membershipMessage);

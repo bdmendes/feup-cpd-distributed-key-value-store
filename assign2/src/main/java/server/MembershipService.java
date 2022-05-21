@@ -2,26 +2,22 @@ package server;
 
 import communication.IPAddress;
 import communication.MessageReceiver;
-import communication.MessageSender;
 import communication.MulticastSender;
 import message.*;
 import utils.MembershipLog;
 
 import java.io.*;
-import java.net.InetAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
     private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
     private final Map<String, Integer> membershipLog = MembershipLog.generateMembershipLog();
-    private final Set<Node> clusterNodes;
+    private final ClusterMap clusterMap = new ClusterMap();
     private final IPAddress ipMulticastGroup;
     private final ServerSocket serverSocket;
 
@@ -29,7 +25,6 @@ public class MembershipService implements MembershipRMI {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.serverSocket = new ServerSocket(ipMulticastGroup.getPort());
-        clusterNodes = ConcurrentHashMap.newKeySet();
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
     }
@@ -38,8 +33,8 @@ public class MembershipService implements MembershipRMI {
         return storageService;
     }
 
-    public Set<Node> getClusterNodes() {
-        return clusterNodes;
+    public ClusterMap getClusterMap() {
+        return clusterMap;
     }
 
     public IPAddress getIpMulticastGroup() {
@@ -122,7 +117,7 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 != 0) {
             return false;
         }
-        clusterNodes.add(storageService.getNode());
+        clusterMap.add(storageService.getNode());
         addMembershipEvent(storageService.getNode().id(),
                 nodeMembershipCounter.get() == 0
                         ? nodeMembershipCounter.getAndIncrement()
@@ -135,7 +130,7 @@ public class MembershipService implements MembershipRMI {
         if (nodeMembershipCounter.get() % 2 == 0) {
             return false;
         }
-        clusterNodes.remove(storageService.getNode());
+        clusterMap.remove(storageService.getNode());
         addMembershipEvent(storageService.getNode().id(), nodeMembershipCounter.incrementAndGet());
         return this.multicastJoinLeave(serverSocket);
     }
