@@ -1,13 +1,12 @@
 package server;
 
 import communication.IPAddress;
-import communication.MessageReceiver;
+import communication.JoinInitMembership;
 import communication.MulticastHandler;
 import message.*;
 import utils.MembershipLog;
 
 import java.io.*;
-import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
@@ -112,11 +111,16 @@ public class MembershipService implements MembershipRMI {
         //
     }
 
+    private JoinMessage createJoinMessage(int port) {
+        JoinMessage joinMessage = new JoinMessage();
+        joinMessage.setCounter(nodeMembershipCounter.get());
+        joinMessage.setNodeId(storageService.getNode().id());
+        joinMessage.setPort(port);
+        return joinMessage;
+    }
+
     private void multicastJoinLeave(int port) throws IOException {
-        JoinMessage message = new JoinMessage();
-        message.setCounter(nodeMembershipCounter.get());
-        message.setNodeId(storageService.getNode().id());
-        message.setPort(port);
+        JoinMessage message = createJoinMessage(port);
         multicastHandler.sendMessage(message);
         incrementCounter();
     }
@@ -127,11 +131,14 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
+
         multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
         ServerSocket serverSocket = new ServerSocket();
         serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
 
-        MessageReceiver messageReceiver = new MessageReceiver(this, serverSocket, 1200);
+        JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
+
+        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,1200);
         Thread messageReceiverThread = new Thread(messageReceiver);
         messageReceiverThread.start();
 
@@ -140,6 +147,7 @@ public class MembershipService implements MembershipRMI {
         } catch (IOException e) {
             e.printStackTrace();
             multicastHandler.close();
+            messageReceiver.close();
             return false;
         }
 

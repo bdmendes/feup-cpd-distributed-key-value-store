@@ -107,6 +107,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket socket) {
+        System.out.println("Received membership message");
         // update my membership view using Moodle's merge algorithm (in the forum)
         // deixa a magia acontecer
         //MembershipService.doEverything(true);
@@ -115,21 +116,24 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     @Override
     public void processJoin(JoinMessage joinMessage, Socket socket) {
         if(joinMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
-            System.out.println("I'm the new node");
+            //System.out.println("I'm the new node");
             return;
         }
+        // TODO: if has already sent membership message, and log was not updated, then do nothing
         System.out.println("new node: " + joinMessage.getNodeId());
 
-        try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getPort())) {
-            membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
+        if(joinMessage.getCounter() % 2 == 0) {
+            try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getPort())) {
+                membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
 
-            Thread.sleep(new Random().nextInt(500));
+                Thread.sleep(new Random().nextInt(500));
 
-            MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterNodes(), membershipService.getMembershipLog());
-            MessageSender messageSender = new MessageSender(otherNode);
-            messageSender.sendMessage(membershipMessage);
-        } catch (IOException | InterruptedException e) {
-            e.printStackTrace();
+                MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterNodes(), membershipService.getMembershipLog());
+                MessageSender messageSender = new MessageSender(otherNode);
+                messageSender.sendMessage(membershipMessage);
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 

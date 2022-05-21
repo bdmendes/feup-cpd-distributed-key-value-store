@@ -13,16 +13,20 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
 
-public class MessageReceiver implements Runnable {
+public class JoinInitMembership implements Runnable {
     private final int blockMiliseconds;
     private final ServerSocket serverSocket;
     private final MembershipService membershipService;
+    private final MulticastHandler multicastHandler;
+    private final Message retransmitMessage;
     private boolean running;
 
-    public MessageReceiver(MembershipService service, ServerSocket socket, int blockMiliseconds){
+    public JoinInitMembership(MembershipService service, ServerSocket socket, Message retransmit, MulticastHandler handler, int blockMiliseconds){
         this.membershipService = service;
         this.blockMiliseconds = blockMiliseconds;
+        this.multicastHandler = handler; // what if handler is closed while this is running?
         this.serverSocket = socket;
+        this.retransmitMessage = retransmit;
         this.running = true;
     }
 
@@ -51,16 +55,41 @@ public class MessageReceiver implements Runnable {
 
     @Override
     public void run() {
-        try {
-            Message message = receiveMessage();
-            if (message != null) {
-                MessageProcessor processor = new MessageProcessor(membershipService, message, null);
-                processor.run();
+        int retransmitted = 1;
+        int received = 0;
+
+        while(retransmitted <= 3 && received < 3 && running) {
+            Message receivedMessage;
+
+            try {
+                System.out.println("Waiting for membership message");
+                receivedMessage = receiveMessage();
+            } catch (Exception e) {
+                continue;
             }
 
-            close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            if(receivedMessage == null) {
+                if(retransmitted == 3) {
+                    break;
+                }
+
+                try {
+                    multicastHandler.sendMessage(retransmitMessage);
+
+                    System.out.println("Retransmitted join message");
+                    retransmitted++;
+                } catch (IOException e) {
+                    return;
+                }
+
+                continue;
+            }
+
+            received++;
+            MessageProcessor processor = new MessageProcessor(membershipService, receivedMessage, null);
+            processor.run();
         }
+
+        System.out.println("Received " + received + " messages");
     }
 }
