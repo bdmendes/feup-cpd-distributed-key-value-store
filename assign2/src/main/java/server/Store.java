@@ -22,7 +22,7 @@ public class Store {
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
             Registry registry = LocateRegistry.getRegistry();
-            registry.bind("reg" + membershipService.getStorageService().getNode().id(), stub);
+            registry.rebind("reg" + membershipService.getStorageService().getNode().id(), stub);
             System.err.println("Server ready for RMI operations");
         } catch (Exception e) {
             System.err.println("Could not bind membership service stub to RMI registry: " + e);
