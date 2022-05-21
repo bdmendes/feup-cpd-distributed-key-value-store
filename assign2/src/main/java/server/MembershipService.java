@@ -132,6 +132,9 @@ public class MembershipService implements MembershipRMI {
         }
         clusterMap.remove(storageService.getNode());
         addMembershipEvent(storageService.getNode().id(), nodeMembershipCounter.incrementAndGet());
+        
+        // TRANSFER ALL MY KEYS TO MY SUCCESSOR
+
         return this.multicastJoinLeave(serverSocket);
     }
 
