@@ -56,8 +56,7 @@ public class MembershipService implements MembershipRMI {
         }
 
         scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(electionTask,0, 1, TimeUnit.SECONDS);
-        System.out.println(scheduler);
+        scheduler.scheduleAtFixedRate(electionTask,0, 10, TimeUnit.SECONDS);
     }
 
     public boolean isJoined() {
@@ -264,5 +263,17 @@ public class MembershipService implements MembershipRMI {
         int counter = this.nodeMembershipCounter.incrementAndGet();
         this.writeMembershipCounterToFile(counter);
         return counter;
+    }
+
+    public void setLeader() {
+        this.isLeader = true;
+    }
+
+    public void unsetLeader() {
+        this.isLeader = false;
+    }
+
+    public boolean isLeader() {
+        return this.isLeader;
     }
 }

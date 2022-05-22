@@ -19,11 +19,11 @@ public class ElectionTask implements Runnable {
         Node currentNode = membershipService.getStorageService().getNode();
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
 
-        System.out.println("wtf");
-
         ElectionMessage message = new ElectionMessage();
         message.setOrigin(currentNode.id());
-        message.setMembershipLog(membershipService.getMembershipLog());
+        message.setMembershipLog(membershipService.getMembershipLog().getMap());
+
+        System.out.println("Next node " + nextNode);
 
         if (nextNode == null) {
             membershipService.setLeader();
@@ -31,7 +31,6 @@ public class ElectionTask implements Runnable {
         }
 
         try {
-            System.out.println(nextNode);
             Socket socket = new Socket(nextNode.id(), nextNode.port());
             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
             dataOutputStream.write(message.encode());

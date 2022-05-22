@@ -2,6 +2,7 @@ package server;
 
 import message.*;
 import message.messagereader.MessageReader;
+import utils.MembershipLog;
 import utils.StoreUtils;
 
 import java.io.IOException;
@@ -65,6 +66,14 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 System.out.println("Sending dispatched request back to the client");
                 sendMessage(replyMessage, clientSocket);
             }
+        } catch (IOException e) {
+            throw new RuntimeException("Could not request operation to responsible node");
+        }
+    }
+
+    private void dispatchMessageToNodeWithoutReply(Node node, Message message) {
+        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
+            sendMessage(message, responsibleNodeSocket);
         } catch (IOException e) {
             throw new RuntimeException("Could not request operation to responsible node");
         }
@@ -307,6 +316,62 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     @Override
     public void process(Message message, Socket socket) throws IOException {
         message.accept(this, socket);
+    }
+
+    @Override
+    public void processElection(ElectionMessage electionMessage, Socket socket) {
+        Map<String, Integer> incomingMembershipLog = electionMessage.getMembershipLog();
+        String origin = electionMessage.getOrigin();
+
+        Node currentNode = membershipService.getStorageService().getNode();
+        Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
+
+        System.out.println("Origin: " + nextNode + " " + origin + " " + currentNode.id());
+        if (origin.equals(currentNode.id())) {
+            membershipService.setLeader();
+            LeaderMessage message = new LeaderMessage();
+            message.setLeaderNode(origin);
+            System.out.println("here " + message + " " + nextNode);
+            this.dispatchMessageToNodeWithoutReply(nextNode, message);
+            return;
+        }
+
+        MembershipLog membershipLog = membershipService.getMembershipLog();
+
+        Integer membershipDifference = incomingMembershipLog.entrySet()
+                .parallelStream()
+                .reduce(0, (Integer subtotal, Map.Entry<String, Integer> element) -> {
+                    Integer current = membershipLog.get(element.getKey());
+
+                    if (current == null) {
+                        return subtotal - element.getValue();
+                    }
+
+                    return subtotal + current - element.getValue();
+                }, Integer::sum);
+
+        if (membershipDifference <= 0) {
+            return;
+        }
+
+        this.dispatchMessageToNodeWithoutReply(nextNode, electionMessage);
+    }
+
+    @Override
+    public void processLeader(LeaderMessage leaderMessage, Socket socket) {
+        if (leaderMessage.getLeaderNode().equals(membershipService.getStorageService().getNode().id())) {
+            System.out.println(membershipService.getStorageService().getNode().id() + " is leader.");
+            return;
+        }
+
+        membershipService.unsetLeader();
+        System.out.println(membershipService.getStorageService().getNode().id() + " is not leader.");
+
+        Node currentNode = membershipService.getStorageService().getNode();
+        Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
+
+
+        this.dispatchMessageToNodeWithoutReply(nextNode, leaderMessage);
     }
 
 }

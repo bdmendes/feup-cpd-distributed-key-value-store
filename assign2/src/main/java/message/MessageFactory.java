@@ -18,6 +18,8 @@ public class MessageFactory {
             case DELETE_REPLY -> new DeleteReply(headers);
             case JOIN -> new JoinMessage(headers);
             case MEMBERSHIP -> new MembershipMessage(headers, body);
+            case ELECTION -> new ElectionMessage(headers, body);
+            case LEADER -> new LeaderMessage(headers);
         };
     }
 }
