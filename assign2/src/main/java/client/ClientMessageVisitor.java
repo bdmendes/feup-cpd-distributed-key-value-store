@@ -4,8 +4,9 @@ import message.*;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 
-public class ClientVisitor implements MessageVisitor {
+public class ClientMessageVisitor implements MessageVisitor {
     @Override
     public void processPut(PutMessage putMessage, Socket socket) {
 
@@ -36,14 +37,14 @@ public class ClientVisitor implements MessageVisitor {
         if(getReply.getStatusCode() == StatusCode.OK) {
             System.out.println("GET SUCCESS FOR " + getReply.getKey());
             System.out.println("VALUE:");
-            System.out.println(new String(getReply.getValue()));
+            System.out.println(new String(getReply.getValue(), StandardCharsets.UTF_8));
         } else {
             System.out.println("GET FAILURE: " + getReply.getStatusCode());
         }
     }
 
     @Override
-    public void processPutReply(PutReply putReply, Socket socket) throws IOException {
+    public void processPutReply(PutReply putReply, Socket socket) {
         if(putReply.getStatusCode() == StatusCode.OK) {
             System.out.println("PUT SUCCESS FOR " + putReply.getKey());
         } else {

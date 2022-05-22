@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class GetReply extends ReplyMessage {
+public class GetReply extends ReplyKeyMessage {
     private String key;
     private byte[] value;
 

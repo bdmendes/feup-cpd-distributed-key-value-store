@@ -6,11 +6,14 @@ import communication.MulticastHandler;
 import message.*;
 import utils.MembershipLog;
 import utils.SentMemberships;
+import utils.StoreUtils;
 
 import java.io.*;
 import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -124,10 +127,6 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
-    private void multicastMembershipLog() {
-        //
-    }
-
     private JoinMessage createJoinMessage(int port) {
         JoinMessage joinMessage = new JoinMessage();
         joinMessage.setCounter(nodeMembershipCounter.get());
@@ -180,6 +179,28 @@ public class MembershipService implements MembershipRMI {
         return true;
     }
 
+    private void transferAllMyKeysToMySuccessor() {
+        Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
+        if (successorNode.equals(this.storageService.getNode())){
+            return;
+        }
+
+        for (String hash : getStorageService().getHashes()) {
+            PutMessage putMessage = new PutMessage();
+            try {
+                File file = new File(getStorageService().getValueFilePath(hash));
+                byte[] bytes = Files.readAllBytes(file.toPath());
+                String key = StoreUtils.sha256(bytes);
+                putMessage.setKey(key);
+                putMessage.setValue(bytes);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("File not found");
+            }
+            MessageProcessor.dispatchMessageToNode(successorNode, putMessage, null);
+            this.getStorageService().delete(hash);
+        }
+    }
+
     @Override
     public boolean leave() throws IOException {
         if (!isJoined()) {
@@ -196,13 +217,10 @@ public class MembershipService implements MembershipRMI {
 
         multicastHandler.close();
 
+        this.transferAllMyKeysToMySuccessor();
+
         clusterMap.clear();
         clearMembershipLog();
-
-        System.out.println(this.getClusterMap().getNodes());
-        System.out.println(this.getMembershipLog(32));
-        
-        // TRANSFER ALL MY KEYS TO MY SUCCESSOR
 
         return true;
     }

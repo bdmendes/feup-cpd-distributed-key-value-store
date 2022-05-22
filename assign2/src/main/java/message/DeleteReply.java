@@ -5,7 +5,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DeleteReply extends ReplyMessage {
+public class DeleteReply extends ReplyKeyMessage {
     private String key;
 
     public DeleteReply(String headers) {

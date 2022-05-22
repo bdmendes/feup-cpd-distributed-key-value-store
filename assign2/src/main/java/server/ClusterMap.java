@@ -1,5 +1,6 @@
 package server;
 
+import utils.MembershipLog;
 import utils.StoreUtils;
 
 import java.nio.charset.StandardCharsets;

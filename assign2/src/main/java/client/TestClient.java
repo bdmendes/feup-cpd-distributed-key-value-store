@@ -13,10 +13,6 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 public class TestClient {
     private record ClientArgs(String host, String operation, String operand) {
@@ -161,7 +157,7 @@ public class TestClient {
                 OutputStream output = socket.getOutputStream();
                 output.write(msg.encode());
 
-                ClientVisitor visitor = new ClientVisitor();
+                ClientMessageVisitor visitor = new ClientMessageVisitor();
                 BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
                 MessageReader messageReader = new MessageReader();
