@@ -42,8 +42,8 @@ public class MembershipServiceTest {
         StorageService storageService = new StorageService(new Node("-1", -1));
         service = new MembershipService(storageService);
 
-        service.incrementCounter();
-        service.incrementCounter();
+        service.incrementAndGetCounter();
+        service.incrementAndGetCounter();
 
         assertEquals(2, service.getNodeMembershipCounter());
 
@@ -51,7 +51,7 @@ public class MembershipServiceTest {
 
         assertEquals(2, service2.getNodeMembershipCounter());
 
-        service2.incrementCounter();
+        service2.incrementAndGetCounter();
 
         service3 = new MembershipService(storageService);
         assertEquals(3, service3.getNodeMembershipCounter());

@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
-    private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
+    private final AtomicInteger nodeMembershipCounter = new AtomicInteger(-1);
     private final MembershipLog membershipLog = new MembershipLog();
     private final ClusterMap clusterMap = new ClusterMap();
     private final IPAddress ipMulticastGroup;
@@ -38,11 +38,15 @@ public class MembershipService implements MembershipRMI {
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
 
-        if(nodeMembershipCounter.get() % 2 != 0) {
+        if (isJoined()) {
             multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
             Thread multicastHandlerThread = new Thread(multicastHandler);
             multicastHandlerThread.start();
         }
+    }
+
+    private boolean isJoined() {
+        return nodeMembershipCounter.get() % 2 == 0;
     }
 
     public StorageService getStorageService() {
@@ -84,11 +88,10 @@ public class MembershipService implements MembershipRMI {
             Scanner scanner = new Scanner(new File(getMembershipCounterFilePath()));
             counter = scanner.nextInt();
             nodeMembershipCounter.set(counter);
-
             scanner.close();
         } catch (Exception e) {
-            nodeMembershipCounter.set(0);
-            this.writeMembershipCounterToFile(0);
+            nodeMembershipCounter.set(-1);
+            this.writeMembershipCounterToFile(-1);
         }
     }
 
@@ -137,12 +140,11 @@ public class MembershipService implements MembershipRMI {
     private void multicastJoinLeave(int port) throws IOException {
         JoinMessage message = createJoinMessage(port);
         multicastHandler.sendMessage(message);
-        incrementCounter();
     }
 
     @Override
     public boolean join() throws IOException {
-        if (nodeMembershipCounter.get() % 2 != 0) {
+        if (isJoined()) {
             return false;
         }
 
@@ -150,13 +152,12 @@ public class MembershipService implements MembershipRMI {
         ServerSocket serverSocket = new ServerSocket();
         serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
 
-        JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
+        int counter = incrementAndGetCounter();
 
+        JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
         JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,2000);
         Thread messageReceiverThread = new Thread(messageReceiver);
         messageReceiverThread.start();
-
-        int counter = nodeMembershipCounter.get();
 
         try {
             this.multicastJoinLeave(serverSocket.getLocalPort());
@@ -181,11 +182,12 @@ public class MembershipService implements MembershipRMI {
 
     @Override
     public boolean leave() throws IOException {
-        if (nodeMembershipCounter.get() % 2 == 0) {
+        if (!isJoined()) {
             return false;
         }
 
         try {
+            incrementAndGetCounter();
             this.multicastJoinLeave(-1);
         } catch (IOException e) {
             e.printStackTrace();
@@ -228,8 +230,9 @@ public class MembershipService implements MembershipRMI {
         this.writeMembershipLogToFile();
     }
 
-    protected void incrementCounter() {
+    protected int incrementAndGetCounter() {
         int counter = this.nodeMembershipCounter.incrementAndGet();
         this.writeMembershipCounterToFile(counter);
+        return counter;
     }
 }

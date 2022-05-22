@@ -69,24 +69,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
     }
 
-    @Override
-    public void processPut(PutMessage putMessage, Socket clientSocket) {
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            PutReply response = new PutReply();
-            response.setKey(putMessage.getKey());
-            try {
-                membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.ERROR);
-            }
-            this.sendMessage(response, clientSocket);
-        } else {
-            this.dispatchMessageToResponsibleNode(responsibleNode, message, clientSocket);
-        }
-    }
-
     public void processJoinMessage(JoinMessage joinMessage) {
         if(this.membershipService.getSentMemberships().hasSentMembership(
                 joinMessage.getNodeId(),
@@ -161,6 +143,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             processLeaveMessage(joinMessage);
         }
     }
+
     public void processGet(GetMessage getMessage, Socket clientSocket) {
         Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
         if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
@@ -172,6 +155,24 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 response.setStatusCode(StatusCode.OK);
             } catch (IOException e) {
                 response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+            }
+            this.sendMessage(response, clientSocket);
+        } else {
+            this.dispatchMessageToResponsibleNode(responsibleNode, message, clientSocket);
+        }
+    }
+
+    @Override
+    public void processPut(PutMessage putMessage, Socket clientSocket) {
+        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
+        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
+            PutReply response = new PutReply();
+            response.setKey(putMessage.getKey());
+            try {
+                membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
+                response.setStatusCode(StatusCode.OK);
+            } catch (IOException e) {
+                response.setStatusCode(StatusCode.ERROR);
             }
             this.sendMessage(response, clientSocket);
         } else {
