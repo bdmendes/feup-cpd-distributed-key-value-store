@@ -17,6 +17,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MembershipService implements MembershipRMI {
@@ -27,12 +30,16 @@ public class MembershipService implements MembershipRMI {
     private final IPAddress ipMulticastGroup;
     private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
+    private boolean isLeader;
+    private final ScheduledExecutorService scheduler;
+    private final ElectionTask electionTask = new ElectionTask(this);
 
     protected MembershipService(StorageService storageService) {
         this.storageService = storageService;
         ipMulticastGroup = null;
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
+        scheduler = null;
     }
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
@@ -40,12 +47,17 @@ public class MembershipService implements MembershipRMI {
         this.ipMulticastGroup = ipMulticastGroup;
         this.readMembershipCounterFromFile();
         this.readMembershipLogFromFile();
+        this.isLeader = false;
 
         if (isJoined()) {
             multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
             Thread multicastHandlerThread = new Thread(multicastHandler);
             multicastHandlerThread.start();
         }
+
+        scheduler = Executors.newScheduledThreadPool(1);
+        scheduler.scheduleAtFixedRate(electionTask,0, 1, TimeUnit.SECONDS);
+        System.out.println(scheduler);
     }
 
     public boolean isJoined() {
