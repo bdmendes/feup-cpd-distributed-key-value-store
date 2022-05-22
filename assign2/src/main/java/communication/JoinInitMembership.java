@@ -1,5 +1,6 @@
 package communication;
 
+import message.MembershipMessage;
 import message.Message;
 import message.MessageFactory;
 import message.messagereader.MessageReader;
@@ -12,6 +13,8 @@ import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.HashSet;
+import java.util.Set;
 
 public class JoinInitMembership implements Runnable {
     private final int blockMiliseconds;
@@ -57,6 +60,7 @@ public class JoinInitMembership implements Runnable {
     public void run() {
         int retransmitted = 1;
         int received = 0;
+        Set<String> receivedMessages = new HashSet<>();
 
         while(retransmitted <= 3 && received < 3 && running) {
             Message receivedMessage;
@@ -85,13 +89,19 @@ public class JoinInitMembership implements Runnable {
                 continue;
             }
 
-            received++;
             MessageProcessor processor = new MessageProcessor(membershipService, receivedMessage, null);
             processor.run();
+
+            if(receivedMessages.contains(((MembershipMessage) receivedMessage).getNodeId())) {
+                continue;
+            }
+
+            receivedMessages.add(((MembershipMessage) receivedMessage).getNodeId());
+            received++;
         }
 
         System.out.println("Received " + received + " messages");
         System.out.println(this.membershipService.getClusterMap().getNodes());
-        System.out.println(this.membershipService.getMembershipLog());
+        System.out.println(this.membershipService.getMembershipLog(32));
     }
 }

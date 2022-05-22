@@ -35,6 +35,7 @@ class MembershipMessageTest {
         MembershipMessage membershipMessage = new MembershipMessage();
         membershipMessage.setMembershipLog(membershipLog.getMap());
         membershipMessage.setNodes(nodes);
+        membershipMessage.setNodeId("0");
         byte[] data = membershipMessage.encode();
 
         MessageReader messageReader = new MessageReader();

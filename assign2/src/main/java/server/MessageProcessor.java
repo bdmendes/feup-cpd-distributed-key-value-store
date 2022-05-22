@@ -91,7 +91,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     @Override
     public void processJoin(JoinMessage joinMessage, Socket dummy) {
         if (joinMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
-            //System.out.println("I'm the new node");
             return;
         }
         // TODO: if has already sent membership message, and log was not updated, then do nothing
@@ -104,15 +103,16 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             this.membershipService.getClusterMap().add(newNode);
 
             System.out.println(this.membershipService.getClusterMap().getNodes());
-            System.out.println(this.membershipService.getMembershipLog());
+            System.out.println(this.membershipService.getMembershipLog(32));
 
             try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
                 Thread.sleep(new Random().nextInt(500));
 
                 MembershipMessage membershipMessage = new MembershipMessage();
 
-                membershipMessage.setMembershipLog(membershipService.getMembershipLog());
+                membershipMessage.setMembershipLog(membershipService.getMembershipLog(32));
                 membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
+                membershipMessage.setNodeId(membershipService.getStorageService().getNode().id());
                 sendMessage(membershipMessage, otherNode);
 
 
@@ -130,7 +130,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             this.membershipService.getClusterMap().remove(new Node(joinMessage.getNodeId(), joinMessage.getPort()));
 
             System.out.println(this.membershipService.getClusterMap().getNodes());
-            System.out.println(this.membershipService.getMembershipLog());
+            System.out.println(this.membershipService.getMembershipLog(32));
         }
     }
     public void processGet(GetMessage getMessage, Socket clientSocket) {
@@ -168,9 +168,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket dummy) {
         System.out.println("Received membership message");
+        Map<String, Integer> recentLogs = this.membershipService.getMembershipLog(32);
 
         for (Node node : membershipMessage.getNodes()) {
-            boolean loggedRecently = this.membershipService.getMembershipLog().containsKey(node.id());
+            boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
                 this.membershipService.getClusterMap().add(node);
             }
@@ -179,9 +180,9 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         for (Map.Entry<String, Integer> entry : membershipMessage.getMembershipLog().entrySet()) {
             String nodeId = entry.getKey();
             Integer membershipCounter = entry.getValue();
-            boolean containsEventFromNode = this.membershipService.getMembershipLog().containsKey(nodeId);
+            boolean containsEventFromNode = recentLogs.containsKey(nodeId);
             boolean newerThanLocalEvent = containsEventFromNode
-                    && this.membershipService.getMembershipLog().get(nodeId) < membershipCounter;
+                    && recentLogs.get(nodeId) < membershipCounter;
             if (!containsEventFromNode || newerThanLocalEvent) {
                 this.membershipService.addMembershipEvent(nodeId, membershipCounter);
                 boolean nodeJoined = membershipCounter % 2 == 0;

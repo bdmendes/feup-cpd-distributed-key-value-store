@@ -2,7 +2,6 @@ package server;
 
 import communication.IPAddress;
 import message.MembershipMessage;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -67,7 +66,7 @@ public class MembershipServiceTest {
         service.addMembershipEvent("0", 0);
         service.addMembershipEvent("2", 3);
 
-        Map<String, Integer> membershipLog = service.getMembershipLog();
+        Map<String, Integer> membershipLog = service.getMembershipLog(32);
         assertEquals(2, membershipLog.size());
         assertTrue(membershipLog.containsKey("0"));
         assertTrue(membershipLog.containsKey("2"));
@@ -79,7 +78,7 @@ public class MembershipServiceTest {
 
         MembershipService service2 = new MembershipService(storageService, new IPAddress("", 0));
 
-        membershipLog = service2.getMembershipLog();
+        membershipLog = service2.getMembershipLog(32);
         assertEquals(2, membershipLog.size());
         assertTrue(membershipLog.containsKey("0"));
         assertTrue(membershipLog.containsKey("2"));
@@ -99,7 +98,7 @@ public class MembershipServiceTest {
             service.addMembershipEvent(Integer.toString(i), i);
         }
 
-        var valuesList = service.getMembershipLog().values().stream().toList();
+        var valuesList = service.getMembershipLog(32).values().stream().toList();
         for (int i = 0; i < 32; i++) {
             assertEquals(valuesList.get(i), i + 8);
         }
@@ -125,8 +124,8 @@ public class MembershipServiceTest {
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog().size(), 2);
-        assertEquals(membershipService.getMembershipLog().get("2"), 0);
+        assertEquals(membershipService.getMembershipLog(32).size(), 2);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 0);
     }
 
     @Test
@@ -150,7 +149,7 @@ public class MembershipServiceTest {
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 1);
-        assertEquals(membershipService.getMembershipLog().get("2"), 1);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 1);
     }
 
     @Test
@@ -174,7 +173,7 @@ public class MembershipServiceTest {
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog().get("2"), 2);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 2);
     }
 
     @Test
@@ -198,6 +197,6 @@ public class MembershipServiceTest {
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog().get("2"), 2);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 2);
     }
 }

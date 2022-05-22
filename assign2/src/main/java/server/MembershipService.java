@@ -54,8 +54,21 @@ public class MembershipService implements MembershipRMI {
         return ipMulticastGroup;
     }
 
+    public Map<String, Integer> getMembershipLog(int numberOfLogs) {
+        return membershipLog.getMostRecentLogs(numberOfLogs);
+    }
+
+
+    public Map<String, Integer> cloneLog() {
+        return new LinkedHashMap<>(membershipLog.getMap());
+    }
+
+    /**
+     * ONLY use get with this map.
+     * @return the full membership log map.
+     */
     public Map<String, Integer> getMembershipLog() {
-        return membershipLog.getMostRecentLogs(32);
+        return membershipLog.getMap();
     }
 
     protected void readMembershipCounterFromFile() {
@@ -151,7 +164,7 @@ public class MembershipService implements MembershipRMI {
         addMembershipEvent(storageService.getNode().id(), counter);
 
         System.out.println(this.getClusterMap().getNodes());
-        System.out.println(this.getMembershipLog());
+        System.out.println(this.getMembershipLog(32));
 
         Thread multicastHandlerThread = new Thread(multicastHandler);
         multicastHandlerThread.start();
@@ -178,7 +191,7 @@ public class MembershipService implements MembershipRMI {
         clearMembershipLog();
 
         System.out.println(this.getClusterMap().getNodes());
-        System.out.println(this.getMembershipLog());
+        System.out.println(this.getMembershipLog(32));
         
         // TRANSFER ALL MY KEYS TO MY SUCCESSOR
 

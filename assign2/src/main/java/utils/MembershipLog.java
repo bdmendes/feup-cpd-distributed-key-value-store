@@ -31,6 +31,9 @@ public class MembershipLog {
         membershipLog.clear();
     }
 
+    public int totalCounter() {
+        return membershipLog.values().stream().mapToInt(Integer::intValue).sum();
+    }
 
     public Map<String, Integer> getMostRecentLogs(int numberOfLogs) {
         Map<String, Integer> mostRecentLogs = new LinkedHashMap<>();
