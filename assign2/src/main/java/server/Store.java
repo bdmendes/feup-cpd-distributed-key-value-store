@@ -21,8 +21,9 @@ public class Store {
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
             Registry registry = LocateRegistry.getRegistry();
-            registry.rebind("reg" + membershipService.getStorageService().getNode().id(), stub);
-            System.err.println("Server ready for RMI operations");
+            String registryName = "reg" + membershipService.getStorageService().getNode().id();
+            registry.rebind(registryName, stub);
+            System.err.println("Server ready for RMI operations on registry: " + registryName);
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
@@ -64,7 +65,7 @@ public class Store {
                 new IPAddress(ipMulticast, Integer.parseInt(ipMulticastPort)));
         Store.bindRmiMethods(membershipService);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
         try (ServerSocket serverSocket = new ServerSocket()) {
             serverSocket.bind(new InetSocketAddress(nodeId, storePort));

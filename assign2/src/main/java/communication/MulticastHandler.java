@@ -23,6 +23,12 @@ public class MulticastHandler implements Runnable {
     public MulticastHandler(Node node, IPAddress multicastAddress, MembershipService service) throws IOException {
         InetAddress address  = InetAddress.getByName(node.id());
         networkInterface = NetworkInterface.getByInetAddress(address);
+        if (networkInterface == null) {
+            System.err.println("The specified ip address is not bound to any network interface on your machine");
+            System.err.println("If you want to add it to the loopback interface, run the utility script add_lo_addr.sh");
+            System.exit(1);
+        }
+
         this.multicastAddress = new InetSocketAddress(multicastAddress.getIp(), multicastAddress.getPort());
         this.membershipService = service;
 
@@ -64,7 +70,7 @@ public class MulticastHandler implements Runnable {
                 MessageProcessor processor = new MessageProcessor(membershipService, message, null);
                 executorService.execute(processor);
             } catch (IOException e) {
-                if(running) {
+                if (running) {
                     throw new RuntimeException(e);
                 }
             }
