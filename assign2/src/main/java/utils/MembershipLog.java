@@ -3,16 +3,36 @@ package utils;
 import message.MessageConstants;
 
 import java.io.IOException;
+import java.lang.reflect.Member;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 public class MembershipLog {
-    public static Map<String, Integer> generateMembershipLog() {
-        return Collections.synchronizedMap(new LinkedHashMap<>(
-                32, .75f, true));
+    private final Map<String, Integer> membershipLog;
+
+    public MembershipLog() {
+        membershipLog = Collections.synchronizedMap(new LinkedHashMap<>(
+                32, .75f, false));
+    }
+    public Map<String, Integer> getMap() {
+        return membershipLog;
     }
 
-    public static Map<String, Integer> getMostRecentLogs(Map<String, Integer> membershipLog, int numberOfLogs) {
+    public Integer put(String nodeId, Integer nodeMembershipCounter) {
+        membershipLog.remove(nodeId);
+        return membershipLog.put(nodeId, nodeMembershipCounter);
+    }
+
+    public Integer get(String nodeId) {
+        return membershipLog.get(nodeId);
+    }
+
+    public void clear() {
+        membershipLog.clear();
+    }
+
+
+    public Map<String, Integer> getMostRecentLogs(int numberOfLogs) {
         Map<String, Integer> mostRecentLogs = new LinkedHashMap<>();
         int counter = 0;
         int size = membershipLog.size();

@@ -17,12 +17,12 @@ import static org.junit.jupiter.api.Assertions.*;
 class MembershipMessageTest {
 
     Set<Node> nodes;
-    private Map<String, Integer> membershipLog;
+    private MembershipLog membershipLog;
 
     @BeforeEach
     void generate() {
         nodes = new HashSet<>();
-        membershipLog = MembershipLog.generateMembershipLog();
+        membershipLog = new MembershipLog();
         membershipLog.put("0", 0);
         membershipLog.put("1", 0);
         nodes.add(new Node("0", -1));
@@ -32,7 +32,9 @@ class MembershipMessageTest {
 
     @Test
     void encodeDecodeMessage() throws IOException {
-        MembershipMessage membershipMessage = new MembershipMessage(nodes, membershipLog);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setMembershipLog(membershipLog.getMap());
+        membershipMessage.setNodes(nodes);
         byte[] data = membershipMessage.encode();
 
         MessageReader messageReader = new MessageReader();

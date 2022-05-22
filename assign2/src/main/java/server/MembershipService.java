@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
     private final AtomicInteger nodeMembershipCounter = new AtomicInteger();
-    private final Map<String, Integer> membershipLog = MembershipLog.generateMembershipLog();
+    private final MembershipLog membershipLog = new MembershipLog();
     private final ClusterMap clusterMap = new ClusterMap();
     private final IPAddress ipMulticastGroup;
     private MulticastHandler multicastHandler;
@@ -55,7 +55,7 @@ public class MembershipService implements MembershipRMI {
     }
 
     public Map<String, Integer> getMembershipLog() {
-        return MembershipLog.getMostRecentLogs(membershipLog, 32);
+        return membershipLog.getMostRecentLogs(32);
     }
 
     protected void readMembershipCounterFromFile() {
@@ -86,14 +86,14 @@ public class MembershipService implements MembershipRMI {
         byte[] bytes;
         try {
             bytes = Files.readAllBytes(Path.of(getMembershipLogFilePath()));
-            MembershipLog.readMembershipLogFromData(membershipLog, bytes);
+            MembershipLog.readMembershipLogFromData(membershipLog.getMap(), bytes);
         } catch (IOException e) {
             this.writeMembershipLogToFile();
         }
     }
 
     protected void writeMembershipLogToFile() {
-        byte[] bytes = MembershipLog.writeMembershipLogToData(this.membershipLog);
+        byte[] bytes = MembershipLog.writeMembershipLogToData(membershipLog.getMap());
         try (FileOutputStream fos = new FileOutputStream(getMembershipLogFilePath())) {
             fos.write(bytes);
         } catch (IOException e) {

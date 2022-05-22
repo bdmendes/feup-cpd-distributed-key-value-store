@@ -1,7 +1,9 @@
 package utils;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Member;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -19,40 +21,46 @@ class StoreUtilsTest {
     }
 
     @Test
-    void testMap() {
-        Map<String, Integer> map = Collections.synchronizedMap(new LinkedHashMap<String, Integer>(
-                3, .75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
-                return this.size() > 3;
-            }
-        });
-
-        System.out.println(map.size());
-
-        map.put("node1", 0);
-        map.put("node2", 0);
-        map.put("node3", 0);
-        map.put("node1", 1);
-        map.put("node4", 0);
-    }
-
-    @Test
     void membershipLog() {
-        Map<String, Integer> membershipLog = MembershipLog.generateMembershipLog();
-
+        MembershipLog membershipLog = new MembershipLog();
 
         membershipLog.put("node1", 0);
 
-        System.out.println(MembershipLog.getMostRecentLogs(membershipLog, 3));
+        assertEquals(1, membershipLog.getMap().size());
+        assertEquals(0, membershipLog.get("node1"));
 
         membershipLog.put("node2", 0);
         membershipLog.put("node3", 0);
         membershipLog.put("node1", 1);
         membershipLog.put("node4", 0);
 
-        System.out.println(MembershipLog.getMostRecentLogs(membershipLog, 3));
-        System.out.println(membershipLog);
+        Map<String,Integer> mostRecentLog = membershipLog.getMostRecentLogs(3);
+
+        assertEquals(3, mostRecentLog.size());
+        assertEquals(1, mostRecentLog.get("node1"));
+        assertEquals(0, mostRecentLog.get("node3"));
+        assertEquals(0, mostRecentLog.get("node4"));
+        Assertions.assertNull(mostRecentLog.get("node2"));
+
+        assertEquals(4, membershipLog.getMap().size());
+        assertEquals(0, membershipLog.get("node2"));
+
+        byte[] data = MembershipLog.writeMembershipLogToData(membershipLog.getMap());
+
+        membershipLog = new MembershipLog();
+
+        MembershipLog.readMembershipLogFromData(membershipLog.getMap(), data);
+
+        mostRecentLog = membershipLog.getMostRecentLogs(3);
+
+        assertEquals(3, mostRecentLog.size());
+        assertEquals(1, mostRecentLog.get("node1"));
+        assertEquals(0, mostRecentLog.get("node3"));
+        assertEquals(0, mostRecentLog.get("node4"));
+        Assertions.assertNull(mostRecentLog.get("node2"));
+
+        assertEquals(4, membershipLog.getMap().size());
+        assertEquals(0, membershipLog.get("node2"));
     }
 
     @Test

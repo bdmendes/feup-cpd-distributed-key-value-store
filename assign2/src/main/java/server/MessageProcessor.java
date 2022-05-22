@@ -109,8 +109,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
                 Thread.sleep(new Random().nextInt(500));
 
-                MembershipMessage membershipMessage = new MembershipMessage(membershipService.getClusterMap().getNodes(),
-                        membershipService.getMembershipLog());
+                MembershipMessage membershipMessage = new MembershipMessage();
+
+                membershipMessage.setMembershipLog(membershipService.getMembershipLog());
+                membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
                 sendMessage(membershipMessage, otherNode);
 
 

@@ -7,17 +7,16 @@ import java.net.Socket;
 import java.util.*;
 
 public class MembershipMessage extends Message {
-    private final Set<Node> nodes;
-    private final Map<String, Integer> membershipLog;
+    private Set<Node> nodes;
+    private Map<String, Integer> membershipLog;
 
-    public MembershipMessage(Set<Node> nodes, Map<String, Integer> membershipLog) {
-        this.nodes = nodes;
-        this.membershipLog = membershipLog;
+    public MembershipMessage() {
+
     }
 
     public MembershipMessage(String headers, byte[] data) {
         this.nodes = new HashSet<>();
-        membershipLog = MembershipLog.generateMembershipLog();
+        membershipLog = new LinkedHashMap<>();
         Map<String, String> fields = decodeFields(headers);
         String nodeString = fields.get("nodes");
         List<String> nodesRaw = List.of(nodeString.split(","));
@@ -27,6 +26,14 @@ public class MembershipMessage extends Message {
             nodes.add(new Node(parts[0], Integer.parseInt(parts[1])));
         });
         MembershipLog.readMembershipLogFromData(membershipLog, data);
+    }
+
+    public void setMembershipLog(Map<String, Integer> membershipLog) {
+        this.membershipLog = membershipLog;
+    }
+
+    public void setNodes(Set<Node> nodes) {
+        this.nodes = nodes;
     }
 
     public Set<Node> getNodes() {

@@ -118,7 +118,9 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 0);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
@@ -141,7 +143,9 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 1);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
@@ -163,7 +167,9 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 2);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
@@ -185,7 +191,9 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 1);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
