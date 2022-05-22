@@ -13,6 +13,10 @@ import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class TestClient {
     private record ClientArgs(String host, String operation, String operand) {
@@ -40,13 +44,11 @@ public class TestClient {
                 throw new IllegalArgumentException("Missing operand");
             }
             operand = args[2];
-
             clientArgs = new ClientArgs(nodeAccessPoint, operation, operand);
         } else {
             if (args.length != 2) {
                 throw new IllegalArgumentException("Invalid number of arguments");
             }
-
             clientArgs = new ClientArgs(nodeAccessPoint, operation);
         }
 
@@ -131,8 +133,8 @@ public class TestClient {
                 boolean response = clientArgs.operation.equals("join") ? stub.join() : stub.leave();
                 System.out.println("response: " + response);
             } catch (Exception e) {
-                System.err.println("Client RMI operation exception: " + e);
-                e.printStackTrace();
+                System.err.println("RMI error: " + e);
+                System.exit(1);
             }
 
         } else {

@@ -32,15 +32,13 @@ public class ClientVisitor implements MessageVisitor {
     }
 
     @Override
-    public void processGetReply(GetReply getReply, Socket socket) throws IOException {
+    public void processGetReply(GetReply getReply, Socket socket) {
         if(getReply.getStatusCode() == StatusCode.OK) {
             System.out.println("GET SUCCESS FOR " + getReply.getKey());
             System.out.println("VALUE:");
             System.out.println(new String(getReply.getValue()));
-        } else if (getReply.getStatusCode() == StatusCode.FILE_NOT_FOUND) {
-            System.out.println("GET FAILURE: NOT FOUND");
         } else {
-            System.out.println("GET FAILURE");
+            System.out.println("GET FAILURE: " + getReply.getStatusCode());
         }
     }
 
@@ -49,18 +47,16 @@ public class ClientVisitor implements MessageVisitor {
         if(putReply.getStatusCode() == StatusCode.OK) {
             System.out.println("PUT SUCCESS FOR " + putReply.getKey());
         } else {
-            System.out.println("PUT FAILURE");
+            System.out.println("PUT FAILURE: " + putReply.getStatusCode());
         }
     }
 
     @Override
-    public void processDeleteReply(DeleteReply deleteReply, Socket socket) throws IOException {
-        if(deleteReply.getStatusCode() == StatusCode.OK) {
+    public void processDeleteReply(DeleteReply deleteReply, Socket socket) {
+        if (deleteReply.getStatusCode() == StatusCode.OK) {
             System.out.println("DELETE SUCCESS FOR " + deleteReply.getKey());
-        } else if (deleteReply.getStatusCode() == StatusCode.FILE_NOT_FOUND) {
-            System.out.println("DELETE FAILURE: NOT FOUND");
         } else {
-            System.out.println("DELETE FAILURE");
+            System.out.println("DELETE FAILURE: " + deleteReply.getStatusCode());
         }
     }
 

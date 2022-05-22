@@ -2,7 +2,6 @@ package server;
 
 import communication.IPAddress;
 import message.MembershipMessage;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -36,21 +35,26 @@ public class MembershipServiceTest {
 
     @Test
     void testGetPut() throws IOException {
+        MembershipService service;
+        MembershipService service2;
+        MembershipService service3;
+
         StorageService storageService = new StorageService(new Node("-1", -1));
-        MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
-        service.incrementCounter();
-        service.incrementCounter();
+        service = new MembershipService(storageService);
 
-        assertEquals(2, service.getNodeMembershipCounter());
+        service.incrementAndGetCounter();
+        service.incrementAndGetCounter();
 
-        MembershipService service2 = new MembershipService(storageService, new IPAddress("", 0));
+        assertEquals(1, service.getNodeMembershipCounter());
 
-        assertEquals(2, service2.getNodeMembershipCounter());
+        service2 = new MembershipService(storageService);
 
-        service2.incrementCounter();
+        assertEquals(1, service2.getNodeMembershipCounter());
 
-        MembershipService service3 = new MembershipService(storageService, new IPAddress("", 0));
-        assertEquals(3, service3.getNodeMembershipCounter());
+        service2.incrementAndGetCounter();
+
+        service3 = new MembershipService(storageService);
+        assertEquals(2, service3.getNodeMembershipCounter());
     }
 
 
@@ -62,7 +66,7 @@ public class MembershipServiceTest {
         service.addMembershipEvent("0", 0);
         service.addMembershipEvent("2", 3);
 
-        Map<String, Integer> membershipLog = service.getMembershipLog();
+        Map<String, Integer> membershipLog = service.getMembershipLog(32);
         assertEquals(2, membershipLog.size());
         assertTrue(membershipLog.containsKey("0"));
         assertTrue(membershipLog.containsKey("2"));
@@ -74,7 +78,7 @@ public class MembershipServiceTest {
 
         MembershipService service2 = new MembershipService(storageService, new IPAddress("", 0));
 
-        membershipLog = service2.getMembershipLog();
+        membershipLog = service2.getMembershipLog(32);
         assertEquals(2, membershipLog.size());
         assertTrue(membershipLog.containsKey("0"));
         assertTrue(membershipLog.containsKey("2"));
@@ -94,7 +98,7 @@ public class MembershipServiceTest {
             service.addMembershipEvent(Integer.toString(i), i);
         }
 
-        var valuesList = service.getMembershipLog().values().stream().toList();
+        var valuesList = service.getMembershipLog(32).values().stream().toList();
         for (int i = 0; i < 32; i++) {
             assertEquals(valuesList.get(i), i + 8);
         }
@@ -113,13 +117,15 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 0);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog().size(), 2);
-        assertEquals(membershipService.getMembershipLog().get("2"), 0);
+        assertEquals(membershipService.getMembershipLog(32).size(), 2);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 0);
     }
 
     @Test
@@ -136,12 +142,14 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 1);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 1);
-        assertEquals(membershipService.getMembershipLog().get("2"), 1);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 1);
     }
 
     @Test
@@ -158,12 +166,14 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 2);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog().get("2"), 2);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 2);
     }
 
     @Test
@@ -180,11 +190,13 @@ public class MembershipServiceTest {
         Map<String, Integer> messageEvents = new HashMap<>();
         messageEvents.put("1", 0);
         messageEvents.put("2", 1);
-        MembershipMessage membershipMessage = new MembershipMessage(messageNodes, messageEvents);
+        MembershipMessage membershipMessage = new MembershipMessage();
+        membershipMessage.setNodes(messageNodes);
+        membershipMessage.setMembershipLog(messageEvents);
 
         MessageProcessor messageProcessor = new MessageProcessor(membershipService, null, null);
         messageProcessor.processMembership(membershipMessage, null);
         assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog().get("2"), 2);
+        assertEquals(membershipService.getMembershipLog(32).get("2"), 2);
     }
 }
