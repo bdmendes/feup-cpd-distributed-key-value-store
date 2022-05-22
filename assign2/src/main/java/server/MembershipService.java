@@ -4,6 +4,7 @@ import communication.IPAddress;
 import communication.JoinInitMembership;
 import communication.MulticastHandler;
 import message.*;
+import message.messagereader.MessageReader;
 import utils.MembershipLog;
 import utils.SentMemberships;
 import utils.StoreUtils;
@@ -207,7 +208,7 @@ public class MembershipService implements MembershipRMI {
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            MessageProcessor.dispatchMessageToNode(successorNode, putMessage, null);
+            dispatchMessageToNodeWithoutReply(successorNode, putMessage);
             this.getStorageService().delete(hash);
         }
     }
@@ -276,4 +277,65 @@ public class MembershipService implements MembershipRMI {
     public boolean isLeader() {
         return this.isLeader;
     }
+
+    public void sendMessage(Message message, Socket socket) {
+        try {
+            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
+            dataOutputStream.write(message.encode());
+            dataOutputStream.flush();
+        } catch (IOException e) {
+            throw new RuntimeException("Could not send message");
+        }
+    }
+
+    public Message readMessage(Socket socket) {
+        try {
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            MessageReader messageReader = new MessageReader();
+            while (!messageReader.isComplete()) {
+                messageReader.read(bufferedReader);
+            }
+            return MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
+        } catch (IOException e) {
+            throw new RuntimeException("Could not read message");
+        }
+    }
+
+    public void dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
+        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
+            sendMessage(message, responsibleNodeSocket);
+            Message replyMessage = readMessage(responsibleNodeSocket);
+            if (clientSocket != null) {
+                System.out.println("Sending dispatched request back to the client");
+                sendMessage(replyMessage, clientSocket);
+            }
+        } catch (IOException | RuntimeException e) {
+            throw new RuntimeException("Could not request operation to responsible node");
+        }
+    }
+
+    public void dispatchMessageToNodeWithoutReply(Node node, Message message) {
+        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
+            sendMessage(message, responsibleNodeSocket);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not request operation to responsible node");
+        }
+    }
+
+    public void sendToNextAvailableNode(Message message) {
+        Node currentNode = getStorageService().getNode();
+        Node nextNode;
+        boolean notSent = true;
+
+        while(notSent) {
+            nextNode = getClusterMap().getNodeSuccessor(currentNode);
+            try {
+                dispatchMessageToNodeWithoutReply(nextNode, message);
+                notSent = false;
+            } catch (RuntimeException e) {
+                currentNode = nextNode;
+            }
+        }
+    }
+
 }

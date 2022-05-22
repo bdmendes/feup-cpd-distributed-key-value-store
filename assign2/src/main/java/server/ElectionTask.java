@@ -1,6 +1,7 @@
 package server;
 
 import message.ElectionMessage;
+import message.Message;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -30,15 +31,7 @@ public class ElectionTask implements Runnable {
             return;
         }
 
-        try {
-            Socket socket = new Socket(nextNode.id(), nextNode.port());
-            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataOutputStream.write(message.encode());
-            dataOutputStream.flush();
-            socket.close();
-            System.out.println("Sent election choose event");
-        } catch (IOException e) {
-            // throw new RuntimeException("Could not send message");
-        }
+        this.membershipService.sendToNextAvailableNode(message);
+        System.out.println("Sent election choose event");
     }
 }

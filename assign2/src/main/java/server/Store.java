@@ -20,7 +20,15 @@ public class Store {
     public static void bindRmiMethods(MembershipService membershipService){
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
-            Registry registry = LocateRegistry.getRegistry();
+            Registry registry_temp;
+
+            try {
+                registry_temp = LocateRegistry.createRegistry(1099);
+            } catch (RemoteException e) {
+                registry_temp = LocateRegistry.getRegistry();
+            }
+            final Registry registry = registry_temp;
+
             String registryName = "reg" + membershipService.getStorageService().getNode().id();
             registry.rebind(registryName, stub);
             System.err.println("Server ready for RMI operations on registry: " + registryName);

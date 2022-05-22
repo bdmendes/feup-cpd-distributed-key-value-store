@@ -37,8 +37,8 @@ public class ClusterMapTest {
 
     @Test
     public void findSuccessorNode() {
-        assertEquals(clusterMap.getNodeSuccessor(new Node("210.0.0.0", 5450)), new Node("200.0.0.0", 4450));
-        assertEquals(clusterMap.getNodeSuccessor(new Node("200.0.0.0", 4450)), new Node("190.0.0.0", 3450));
-        assertEquals(clusterMap.getNodeSuccessor(new Node("190.0.0.0", 3450)), new Node("210.0.0.0", 5450));
+        assertEquals(new Node("200.0.0.0", 4450), clusterMap.getNodeSuccessor(new Node("210.0.0.0", 5450)));
+        assertEquals(new Node("190.0.0.0", 3450), clusterMap.getNodeSuccessor(new Node("200.0.0.0", 4450)));
+        assertEquals(new Node("210.0.0.0", 5450), clusterMap.getNodeSuccessor(new Node("190.0.0.0", 3450)));
     }
 }

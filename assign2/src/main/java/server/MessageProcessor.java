@@ -35,50 +35,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
     }
 
-    private static void sendMessage(Message message, Socket socket) {
-        try {
-            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataOutputStream.write(message.encode());
-            dataOutputStream.flush();
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send message");
-        }
-    }
-
-    private static Message readMessage(Socket socket) {
-        try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            MessageReader messageReader = new MessageReader();
-            while (!messageReader.isComplete()) {
-                messageReader.read(bufferedReader);
-            }
-            return MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not read message");
-        }
-    }
-
-    public static void dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
-        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
-            sendMessage(message, responsibleNodeSocket);
-            Message replyMessage = readMessage(responsibleNodeSocket);
-            if (clientSocket != null) {
-                System.out.println("Sending dispatched request back to the client");
-                sendMessage(replyMessage, clientSocket);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Could not request operation to responsible node");
-        }
-    }
-
-    private void dispatchMessageToNodeWithoutReply(Node node, Message message) {
-        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
-            sendMessage(message, responsibleNodeSocket);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not request operation to responsible node");
-        }
-    }
-
     public void processJoinMessage(JoinMessage joinMessage) {
         if(this.membershipService.getSentMemberships().hasSentMembership(
                 joinMessage.getNodeId(),
@@ -113,7 +69,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             membershipMessage.setMembershipLog(membershipService.getMembershipLog(32));
             membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
             membershipMessage.setNodeId(membershipService.getStorageService().getNode().id());
-            sendMessage(membershipMessage, otherNode);
+            this.membershipService.sendMessage(membershipMessage, otherNode);
             this.membershipService.getSentMemberships().saveSentMembership(
                     joinMessage.getNodeId(),
                     joinMessage.getCounter(),
@@ -157,7 +113,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     private void sendErrorResponse(ReplyKeyMessage response, StatusCode statusCode, String requestedKey, Socket clientSocket) {
         response.setKey(requestedKey);
         response.setStatusCode(statusCode);
-        sendMessage(response, clientSocket);
+        this.membershipService.sendMessage(response, clientSocket);
     }
 
     public void processGet(GetMessage getMessage, Socket clientSocket) {
@@ -183,10 +139,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 response.setStatusCode(StatusCode.FILE_NOT_FOUND);
             }
             System.out.println("Getting hash " + getMessage.getKey());
-            sendMessage(response, clientSocket);
+            this.membershipService.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            dispatchMessageToNode(responsibleNode, message, clientSocket);
+            this.membershipService.dispatchMessageToNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -213,10 +169,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 response.setStatusCode(StatusCode.ERROR);
             }
             System.out.println("Putting hash " + putMessage.getKey());
-            sendMessage(response, clientSocket);
+            this.membershipService.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            dispatchMessageToNode(responsibleNode, message, clientSocket);
+            this.membershipService.dispatchMessageToNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -239,10 +195,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             response.setKey(deleteMessage.getKey());
             response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
             System.out.println("Deleting hash " + deleteMessage.getKey());
-            sendMessage(response, clientSocket);
+            this.membershipService.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to node " + responsibleNode);
-            dispatchMessageToNode(responsibleNode, message, clientSocket);
+            this.membershipService.dispatchMessageToNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -292,7 +248,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 } catch (IOException e) {
                     throw new IllegalArgumentException("File not found");
                 }
-                dispatchMessageToNode(joiningNode, putMessage, null);
+                this.membershipService.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
                 this.membershipService.getStorageService().delete(hash);
             }
         }
@@ -300,17 +256,17 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processGetReply(GetReply getReply, Socket socket) {
-        sendMessage(getReply, socket);
+        this.membershipService.sendMessage(getReply, socket);
     }
 
     @Override
     public void processPutReply(PutReply putReply, Socket socket) {
-        sendMessage(putReply, socket);
+        this.membershipService.sendMessage(putReply, socket);
     }
 
     @Override
     public void processDeleteReply(DeleteReply deleteReply, Socket socket) {
-        sendMessage(deleteReply, socket);
+        this.membershipService.sendMessage(deleteReply, socket);
     }
 
     @Override
@@ -332,7 +288,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             LeaderMessage message = new LeaderMessage();
             message.setLeaderNode(origin);
             System.out.println("here " + message + " " + nextNode);
-            this.dispatchMessageToNodeWithoutReply(nextNode, message);
+            this.membershipService.sendToNextAvailableNode(message);
             return;
         }
 
@@ -350,11 +306,11 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                     return subtotal + current - element.getValue();
                 }, Integer::sum);
 
-        if (membershipDifference <= 0) {
+        if (membershipDifference <= 0 && currentNode.id().compareTo(origin) <= 0) {
             return;
         }
 
-        this.dispatchMessageToNodeWithoutReply(nextNode, electionMessage);
+        this.membershipService.sendToNextAvailableNode(electionMessage);
     }
 
     @Override
@@ -371,7 +327,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
 
 
-        this.dispatchMessageToNodeWithoutReply(nextNode, leaderMessage);
+        this.membershipService.sendToNextAvailableNode(leaderMessage);
     }
 
 }
