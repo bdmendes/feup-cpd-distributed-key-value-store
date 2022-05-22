@@ -5,8 +5,10 @@ import communication.JoinInitMembership;
 import communication.MulticastHandler;
 import message.*;
 import utils.MembershipLog;
+import utils.SentMemberships;
 
 import java.io.*;
+import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
@@ -20,6 +22,7 @@ public class MembershipService implements MembershipRMI {
     private final MembershipLog membershipLog = new MembershipLog();
     private final ClusterMap clusterMap = new ClusterMap();
     private final IPAddress ipMulticastGroup;
+    private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
 
     protected MembershipService(StorageService storageService) {
@@ -54,6 +57,10 @@ public class MembershipService implements MembershipRMI {
         return ipMulticastGroup;
     }
 
+    public SentMemberships getSentMemberships() {
+        return sentMemberships;
+    }
+
     public Map<String, Integer> getMembershipLog(int numberOfLogs) {
         return membershipLog.getMostRecentLogs(numberOfLogs);
     }
@@ -67,8 +74,8 @@ public class MembershipService implements MembershipRMI {
      * ONLY use get with this map.
      * @return the full membership log map.
      */
-    public Map<String, Integer> getMembershipLog() {
-        return membershipLog.getMap();
+    public MembershipLog getMembershipLog() {
+        return membershipLog;
     }
 
     protected void readMembershipCounterFromFile() {
@@ -145,7 +152,7 @@ public class MembershipService implements MembershipRMI {
 
         JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
 
-        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,1200);
+        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,2000);
         Thread messageReceiverThread = new Thread(messageReceiver);
         messageReceiverThread.start();
 

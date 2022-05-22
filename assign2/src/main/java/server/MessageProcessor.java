@@ -87,50 +87,78 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
     }
 
+    public void processJoinMessage(JoinMessage joinMessage) {
+        if(this.membershipService.getSentMemberships().hasSentMembership(
+                joinMessage.getNodeId(),
+                joinMessage.getCounter(),
+                this.membershipService.getMembershipLog().totalCounter()
+        )) {
+            System.out.println("Received a duplicate join message");
+            return;
+        }
+
+        Node newNode = new Node(joinMessage.getNodeId(), joinMessage.getPort());
+
+        this.membershipService.addMembershipEvent(joinMessage.getNodeId(), joinMessage.getCounter());
+        this.membershipService.getClusterMap().add(newNode);
+
+        System.out.println(this.membershipService.getClusterMap().getNodes());
+        System.out.println(this.membershipService.getMembershipLog(32));
+
+        try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
+            Thread.sleep(new Random().nextInt(1200));
+            if(this.membershipService.getSentMemberships().hasSentMembership(
+                    joinMessage.getNodeId(),
+                    joinMessage.getCounter(),
+                    this.membershipService.getMembershipLog().totalCounter()
+            )) {
+                System.out.println("Received a duplicate join message");
+                return;
+            }
+
+            MembershipMessage membershipMessage = new MembershipMessage();
+
+            membershipMessage.setMembershipLog(membershipService.getMembershipLog(32));
+            membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
+            membershipMessage.setNodeId(membershipService.getStorageService().getNode().id());
+            sendMessage(membershipMessage, otherNode);
+            this.membershipService.getSentMemberships().saveSentMembership(
+                    joinMessage.getNodeId(),
+                    joinMessage.getCounter(),
+                    this.membershipService.getMembershipLog().totalCounter()
+            );
+            System.out.println("sent membership message to " + joinMessage.getNodeId());
+
+
+            if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
+                    .equals(membershipService.getStorageService().getNode())){
+                this.transferKeysToJoiningNode(newNode);
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void processLeaveMessage(JoinMessage leaveMessage) {
+        System.out.println("left node: " + leaveMessage.getNodeId());
+
+        this.membershipService.addMembershipEvent(leaveMessage.getNodeId(), leaveMessage.getCounter());
+        this.membershipService.getClusterMap().remove(new Node(leaveMessage.getNodeId(), leaveMessage.getPort()));
+
+        System.out.println(this.membershipService.getClusterMap().getNodes());
+        System.out.println(this.membershipService.getMembershipLog(32));
+    }
 
     @Override
     public void processJoin(JoinMessage joinMessage, Socket dummy) {
         if (joinMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
             return;
         }
-        // TODO: if has already sent membership message, and log was not updated, then do nothing
 
         if (joinMessage.getCounter() % 2 == 0) {
-            System.out.println("new node: " + joinMessage.getNodeId());
-            Node newNode = new Node(joinMessage.getNodeId(), joinMessage.getPort());
-
-            this.membershipService.addMembershipEvent(joinMessage.getNodeId(), joinMessage.getCounter());
-            this.membershipService.getClusterMap().add(newNode);
-
-            System.out.println(this.membershipService.getClusterMap().getNodes());
-            System.out.println(this.membershipService.getMembershipLog(32));
-
-            try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
-                Thread.sleep(new Random().nextInt(500));
-
-                MembershipMessage membershipMessage = new MembershipMessage();
-
-                membershipMessage.setMembershipLog(membershipService.getMembershipLog(32));
-                membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
-                membershipMessage.setNodeId(membershipService.getStorageService().getNode().id());
-                sendMessage(membershipMessage, otherNode);
-
-
-                if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
-                        .equals(membershipService.getStorageService().getNode())){
-                    this.transferKeysToJoiningNode(newNode);
-                }
-            } catch (IOException | InterruptedException e) {
-                e.printStackTrace();
-            }
+            processJoinMessage(joinMessage);
         } else {
-            System.out.println("left node: " + joinMessage.getNodeId());
-
-            this.membershipService.addMembershipEvent(joinMessage.getNodeId(), joinMessage.getCounter());
-            this.membershipService.getClusterMap().remove(new Node(joinMessage.getNodeId(), joinMessage.getPort()));
-
-            System.out.println(this.membershipService.getClusterMap().getNodes());
-            System.out.println(this.membershipService.getMembershipLog(32));
+            processLeaveMessage(joinMessage);
         }
     }
     public void processGet(GetMessage getMessage, Socket clientSocket) {
