@@ -45,16 +45,16 @@ public class MembershipServiceTest {
         service.incrementAndGetCounter();
         service.incrementAndGetCounter();
 
-        assertEquals(2, service.getNodeMembershipCounter());
+        assertEquals(1, service.getNodeMembershipCounter());
 
         service2 = new MembershipService(storageService);
 
-        assertEquals(2, service2.getNodeMembershipCounter());
+        assertEquals(1, service2.getNodeMembershipCounter());
 
         service2.incrementAndGetCounter();
 
         service3 = new MembershipService(storageService);
-        assertEquals(3, service3.getNodeMembershipCounter());
+        assertEquals(2, service3.getNodeMembershipCounter());
     }
 
 

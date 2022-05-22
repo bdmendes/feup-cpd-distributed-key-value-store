@@ -4,4 +4,5 @@ public enum StatusCode {
     OK,
     ERROR,
     FILE_NOT_FOUND,
+    NODE_NOT_JOINED
 }

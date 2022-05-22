@@ -45,7 +45,7 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
-    private boolean isJoined() {
+    public boolean isJoined() {
         return nodeMembershipCounter.get() % 2 == 0;
     }
 

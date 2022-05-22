@@ -144,7 +144,19 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
     }
 
+    private void sendNotJoinedResponse(String requestedKey, Socket clientSocket) {
+        GetReply response = new GetReply();
+        response.setKey(requestedKey);
+        response.setStatusCode(StatusCode.NODE_NOT_JOINED);
+        this.sendMessage(response, clientSocket);
+    }
+
     public void processGet(GetMessage getMessage, Socket clientSocket) {
+        if (!membershipService.isJoined()) {
+            this.sendNotJoinedResponse(getMessage.getKey(), clientSocket);
+            return;
+        }
+
         Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
         if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             GetReply response = new GetReply();
@@ -164,6 +176,11 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processPut(PutMessage putMessage, Socket clientSocket) {
+        if (!membershipService.isJoined()) {
+            this.sendNotJoinedResponse(putMessage.getKey(), clientSocket);
+            return;
+        }
+
         Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
         if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             PutReply response = new PutReply();
@@ -182,6 +199,11 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processDelete(DeleteMessage deleteMessage, Socket clientSocket) {
+        if (!membershipService.isJoined()) {
+            this.sendNotJoinedResponse(deleteMessage.getKey(), clientSocket);
+            return;
+        }
+
         Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(deleteMessage.getKey());
         if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             boolean deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
