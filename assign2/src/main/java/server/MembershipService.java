@@ -55,7 +55,7 @@ public class MembershipService implements MembershipRMI {
     }
 
     public Map<String, Integer> getMembershipLog() {
-        return membershipLog;
+        return MembershipLog.getMostRecentLogs(membershipLog, 32);
     }
 
     protected void readMembershipCounterFromFile() {

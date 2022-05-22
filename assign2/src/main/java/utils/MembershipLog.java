@@ -9,12 +9,22 @@ import java.util.*;
 public class MembershipLog {
     public static Map<String, Integer> generateMembershipLog() {
         return Collections.synchronizedMap(new LinkedHashMap<>(
-                32, .75f, true) {
-            @Override
-            protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
-                return this.size() > 32;
+                32, .75f, true));
+    }
+
+    public static Map<String, Integer> getMostRecentLogs(Map<String, Integer> membershipLog, int numberOfLogs) {
+        Map<String, Integer> mostRecentLogs = new LinkedHashMap<>();
+        int counter = 0;
+        int size = membershipLog.size();
+        int start = size - numberOfLogs;
+
+        for (Map.Entry<String, Integer> entry : membershipLog.entrySet()) {
+            if (counter >= start) {
+                mostRecentLogs.put(entry.getKey(), entry.getValue());
             }
-        });
+            counter++;
+        }
+        return mostRecentLogs;
     }
 
     public static void readMembershipLogFromData(Map<String, Integer> membershipLog, byte[] data) {

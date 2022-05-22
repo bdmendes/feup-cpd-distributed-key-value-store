@@ -28,13 +28,31 @@ class StoreUtilsTest {
             }
         });
 
+        System.out.println(map.size());
+
         map.put("node1", 0);
         map.put("node2", 0);
         map.put("node3", 0);
         map.put("node1", 1);
         map.put("node4", 0);
+    }
+
+    @Test
+    void membershipLog() {
+        Map<String, Integer> membershipLog = MembershipLog.generateMembershipLog();
 
 
+        membershipLog.put("node1", 0);
+
+        System.out.println(MembershipLog.getMostRecentLogs(membershipLog, 3));
+
+        membershipLog.put("node2", 0);
+        membershipLog.put("node3", 0);
+        membershipLog.put("node1", 1);
+        membershipLog.put("node4", 0);
+
+        System.out.println(MembershipLog.getMostRecentLogs(membershipLog, 3));
+        System.out.println(membershipLog);
     }
 
     @Test
