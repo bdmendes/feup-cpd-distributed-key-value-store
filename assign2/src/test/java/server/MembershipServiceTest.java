@@ -108,7 +108,7 @@ public class MembershipServiceTest {
     void testMembershipMergeNewNode() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("1", -1));
         membershipService.getMembershipLog().put("1", 0);
 
         Set<Node> messageNodes = new HashSet<>();
@@ -132,8 +132,8 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeLeft() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
-        membershipService.getClusterMap().add(new Node("2", -1));
+        membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("2", -1));
         membershipService.getMembershipLog().put("1", 0);
         membershipService.getMembershipLog().put("2", 0);
 
@@ -156,7 +156,7 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeJoined() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("1", -1));
         membershipService.getMembershipLog().put("1", 0);
         membershipService.getMembershipLog().put("2", 1);
 
@@ -180,8 +180,8 @@ public class MembershipServiceTest {
     void testMembershipMergeOlderNodeEvent() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
-        membershipService.getClusterMap().add(new Node("2", -1));
+        membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("2", -1));
         membershipService.getMembershipLog().put("1", 0);
         membershipService.getMembershipLog().put("2", 2);
 

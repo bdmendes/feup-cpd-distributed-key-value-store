@@ -11,7 +11,6 @@ import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
@@ -116,7 +115,7 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
-        clusterMap.add(storageService.getNode());
+        clusterMap.put(storageService.getNode());
         membershipLog.put(storageService.getNode().id(), counter);
 
         System.out.println(this.getClusterMap().getNodes());

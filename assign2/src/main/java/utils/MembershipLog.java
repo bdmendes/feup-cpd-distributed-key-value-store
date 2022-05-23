@@ -71,12 +71,10 @@ public class MembershipLog {
 
     public static byte[] writeMembershipLogToData(Map<String, Integer> membershipLog) {
         StringBuilder stringBuilder = new StringBuilder();
-        membershipLog.forEach((key, value) -> {
-            stringBuilder.append(key)
-                    .append(" ")
-                    .append(value)
-                    .append(MessageConstants.END_OF_LINE);
-        });
+        membershipLog.forEach((key, value) -> stringBuilder.append(key)
+                .append(" ")
+                .append(value)
+                .append(MessageConstants.END_OF_LINE));
 
         return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
     }
