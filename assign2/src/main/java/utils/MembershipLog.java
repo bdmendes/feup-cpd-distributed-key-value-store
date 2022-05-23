@@ -2,17 +2,22 @@ package utils;
 
 import message.MessageConstants;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
-import java.lang.reflect.Member;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 public class MembershipLog {
     private final Map<String, Integer> membershipLog;
+    private final String filePath;
 
-    public MembershipLog() {
+    public MembershipLog(String filePath) {
         membershipLog = Collections.synchronizedMap(new LinkedHashMap<>(
                 32, .75f, false));
+        this.filePath = filePath;
+        this.readFromFile();
     }
     public Map<String, Integer> getMap() {
         return membershipLog;
@@ -20,7 +25,9 @@ public class MembershipLog {
 
     public Integer put(String nodeId, Integer nodeMembershipCounter) {
         membershipLog.remove(nodeId);
-        return membershipLog.put(nodeId, nodeMembershipCounter);
+        Integer status = membershipLog.put(nodeId, nodeMembershipCounter);
+        writeToFile();
+        return status;
     }
 
     public Integer get(String nodeId) {
@@ -29,6 +36,7 @@ public class MembershipLog {
 
     public void clear() {
         membershipLog.clear();
+        this.writeToFile();
     }
 
     public int totalCounter() {
@@ -71,5 +79,30 @@ public class MembershipLog {
         });
 
         return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private void readFromFile() {
+        if (filePath == null){
+            return;
+        }
+        byte[] bytes;
+        try {
+            bytes = Files.readAllBytes(Path.of(filePath));
+            MembershipLog.readMembershipLogFromData(membershipLog, bytes);
+        } catch (IOException e) {
+            this.writeToFile();
+        }
+    }
+
+    private void writeToFile() {
+        if (filePath == null){
+            return;
+        }
+        byte[] bytes = MembershipLog.writeMembershipLogToData(membershipLog);
+        try (FileOutputStream fos = new FileOutputStream(filePath)) {
+            fos.write(bytes);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

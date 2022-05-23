@@ -1,5 +1,6 @@
-package server;
+package utils;
 
+import server.Node;
 import utils.MembershipLog;
 import utils.StoreUtils;
 
@@ -8,9 +9,11 @@ import java.util.*;
 
 public class ClusterMap {
     private final Map<String, Node> clusterNodes;
+    private final String filePath;
 
-    public ClusterMap() {
+    public ClusterMap(String filePath) {
         this.clusterNodes = Collections.synchronizedSortedMap(new TreeMap<>());
+        this.filePath = filePath;
     }
 
     public Set<Node> getNodes() {

@@ -22,7 +22,7 @@ class StoreUtilsTest {
 
     @Test
     void membershipLog() {
-        MembershipLog membershipLog = new MembershipLog();
+        MembershipLog membershipLog = new MembershipLog(null);
 
         membershipLog.put("node1", 0);
 
@@ -47,7 +47,7 @@ class StoreUtilsTest {
 
         byte[] data = MembershipLog.writeMembershipLogToData(membershipLog.getMap());
 
-        membershipLog = new MembershipLog();
+        membershipLog = new MembershipLog(null);
 
         MembershipLog.readMembershipLogFromData(membershipLog.getMap(), data);
 
