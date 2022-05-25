@@ -5,15 +5,15 @@ import message.*;
 import utils.MembershipLog;
 import utils.StoreUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.Random;
-import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 public class MessageProcessor implements Runnable, MessageVisitor {
     private final MembershipService membershipService;
@@ -36,7 +36,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     }
 
     public void processJoinMessage(JoinMessage joinMessage) {
-        if(this.membershipService.getSentMemberships().hasSentMembership(
+        if (this.membershipService.getSentMemberships().hasSentMembership(
                 joinMessage.getNodeId(),
                 joinMessage.getCounter(),
                 this.membershipService.getMembershipLog().totalCounter()
@@ -52,7 +52,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
         try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
             Thread.sleep(new Random().nextInt(1200));
-            if(this.membershipService.getSentMemberships().hasSentMembership(
+            if (this.membershipService.getSentMemberships().hasSentMembership(
                     joinMessage.getNodeId(),
                     joinMessage.getCounter(),
                     this.membershipService.getMembershipLog().totalCounter()
@@ -76,7 +76,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
 
             if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
-                    .equals(membershipService.getStorageService().getNode())){
+                    .equals(membershipService.getStorageService().getNode())) {
                 this.transferKeysToJoiningNode(newNode);
             }
         } catch (IOException | InterruptedException e) {
@@ -275,11 +275,14 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     public void processElection(ElectionMessage electionMessage, Socket socket) {
         Map<String, Integer> incomingMembershipLog = electionMessage.getMembershipLog();
         String origin = electionMessage.getOrigin();
+        System.out.println(origin);
 
         Node currentNode = membershipService.getStorageService().getNode();
+        System.out.println(currentNode);
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
+        System.out.println(nextNode);
 
-        System.out.println("Origin: " + nextNode + " " + origin + " " + currentNode.id());
+        System.out.println("Origin: " + origin + "; next node: " + nextNode);
         if (origin.equals(currentNode.id())) {
             membershipService.setLeader();
             LeaderMessage message = new LeaderMessage();
