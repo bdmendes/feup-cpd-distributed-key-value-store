@@ -36,7 +36,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     }
 
     public void processJoinMessage(JoinMessage joinMessage) {
-        if(this.membershipService.getSentMemberships().hasSentMembership(
+        if (this.membershipService.getSentMemberships().hasSentMembership(
                 joinMessage.getNodeId(),
                 joinMessage.getCounter(),
                 this.membershipService.getMembershipLog().totalCounter()
@@ -47,8 +47,8 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
         Node newNode = new Node(joinMessage.getNodeId(), joinMessage.getPort());
 
-        this.membershipService.addMembershipEvent(joinMessage.getNodeId(), joinMessage.getCounter());
-        this.membershipService.getClusterMap().add(newNode);
+        this.membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
+        this.membershipService.getClusterMap().put(newNode);
 
         try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
             Thread.sleep(new Random().nextInt(1200));
@@ -87,7 +87,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     public void processLeaveMessage(JoinMessage leaveMessage) {
         System.out.println("left node: " + leaveMessage.getNodeId());
 
-        this.membershipService.addMembershipEvent(leaveMessage.getNodeId(), leaveMessage.getCounter());
+        this.membershipService.getMembershipLog().put(leaveMessage.getNodeId(), leaveMessage.getCounter());
         this.membershipService.getClusterMap().remove(new Node(leaveMessage.getNodeId(), leaveMessage.getPort()));
 
         System.out.println(this.membershipService.getClusterMap().getNodes());
@@ -207,7 +207,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         for (Node node : membershipMessage.getNodes()) {
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
-                this.membershipService.getClusterMap().add(node);
+                this.membershipService.getClusterMap().put(node);
             }
         }
 
@@ -218,12 +218,12 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             boolean newerThanLocalEvent = containsEventFromNode
                     && recentLogs.get(nodeId) < membershipCounter;
             if (!containsEventFromNode || newerThanLocalEvent) {
-                this.membershipService.addMembershipEvent(nodeId, membershipCounter);
+                this.membershipService.getMembershipLog().put(nodeId, membershipCounter);
                 boolean nodeJoined = membershipCounter % 2 == 0;
                 if (nodeJoined) {
                     Optional<Node> node = membershipMessage.getNodes().stream().filter(n -> n.id().equals(nodeId)).findFirst();
                     if (node.isEmpty()) continue;
-                    this.membershipService.getClusterMap().add(node.get());
+                    this.membershipService.getClusterMap().put(node.get());
                 } else {
                     this.membershipService.getClusterMap().removeId(nodeId);
                 }

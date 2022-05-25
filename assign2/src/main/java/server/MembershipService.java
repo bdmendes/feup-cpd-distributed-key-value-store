@@ -10,23 +10,22 @@ import server.tasks.MembershipTask;
 import utils.MembershipLog;
 import utils.SentMemberships;
 import utils.StoreUtils;
+import utils.*;
 
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
-    private final AtomicInteger nodeMembershipCounter = new AtomicInteger(-1);
-    private final MembershipLog membershipLog = new MembershipLog();
-    private final ClusterMap clusterMap = new ClusterMap();
+    private final MembershipCounter nodeMembershipCounter;
+    private final MembershipLog membershipLog;
+    private final ClusterMap clusterMap;
     private final IPAddress ipMulticastGroup;
     private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
@@ -38,19 +37,21 @@ public class MembershipService implements MembershipRMI {
     protected MembershipService(StorageService storageService) {
         this.storageService = storageService;
         ipMulticastGroup = null;
-        this.readMembershipCounterFromFile();
-        this.readMembershipLogFromFile();
+        this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
+        this.membershipLog = new MembershipLog(getMembershipLogFilePath());
+        this.clusterMap = new ClusterMap(getClusterMapFilePath());
         scheduler = null;
     }
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
-        this.readMembershipCounterFromFile();
-        this.readMembershipLogFromFile();
+        this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
+        this.membershipLog = new MembershipLog(getMembershipLogFilePath());
+        this.clusterMap = new ClusterMap(getClusterMapFilePath());
         this.isLeader = false;
 
-        if (isJoined()) {
+        if (ipMulticastGroup != null && isJoined()) {
             multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
             Thread multicastHandlerThread = new Thread(multicastHandler);
             multicastHandlerThread.start();
@@ -71,6 +72,10 @@ public class MembershipService implements MembershipRMI {
 
     public ClusterMap getClusterMap() {
         return clusterMap;
+    }
+
+    public MembershipCounter getMembershipCounter() {
+        return nodeMembershipCounter;
     }
 
     public IPAddress getIpMulticastGroup() {
@@ -95,53 +100,10 @@ public class MembershipService implements MembershipRMI {
     }
 
     /**
-     * ONLY use get with this map.
      * @return the full membership log map.
      */
     public MembershipLog getMembershipLog() {
         return membershipLog;
-    }
-
-    protected void readMembershipCounterFromFile() {
-        int counter;
-        try {
-            Scanner scanner = new Scanner(new File(getMembershipCounterFilePath()));
-            counter = scanner.nextInt();
-            nodeMembershipCounter.set(counter);
-            scanner.close();
-        } catch (Exception e) {
-            nodeMembershipCounter.set(-1);
-            this.writeMembershipCounterToFile(-1);
-        }
-    }
-
-    protected void writeMembershipCounterToFile(int counter) {
-        try {
-            FileWriter fileWriter = new FileWriter(getMembershipCounterFilePath());
-            fileWriter.write(Integer.toString(counter));
-            fileWriter.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    protected void readMembershipLogFromFile() {
-        byte[] bytes;
-        try {
-            bytes = Files.readAllBytes(Path.of(getMembershipLogFilePath()));
-            MembershipLog.readMembershipLogFromData(membershipLog.getMap(), bytes);
-        } catch (IOException e) {
-            this.writeMembershipLogToFile();
-        }
-    }
-
-    protected void writeMembershipLogToFile() {
-        byte[] bytes = MembershipLog.writeMembershipLogToData(membershipLog.getMap());
-        try (FileOutputStream fos = new FileOutputStream(getMembershipLogFilePath())) {
-            fos.write(bytes);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private JoinMessage createJoinMessage(int port) {
@@ -168,7 +130,7 @@ public class MembershipService implements MembershipRMI {
         ServerSocket serverSocket = new ServerSocket();
         serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
 
-        int counter = incrementAndGetCounter();
+        int counter = nodeMembershipCounter.incrementAndGet();
 
         JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
         JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,2000);
@@ -184,8 +146,8 @@ public class MembershipService implements MembershipRMI {
             return false;
         }
 
-        clusterMap.add(storageService.getNode());
-        addMembershipEvent(storageService.getNode().id(), counter);
+        clusterMap.put(storageService.getNode());
+        membershipLog.put(storageService.getNode().id(), counter);
 
         System.out.println(this.getClusterMap().getNodes());
         System.out.println(this.getMembershipLog(32));
@@ -225,7 +187,7 @@ public class MembershipService implements MembershipRMI {
         }
 
         try {
-            incrementAndGetCounter();
+            nodeMembershipCounter.incrementAndGet();
             this.multicastJoinLeave(-1);
         } catch (IOException e) {
             e.printStackTrace();
@@ -237,7 +199,7 @@ public class MembershipService implements MembershipRMI {
         this.transferAllMyKeysToMySuccessor();
 
         clusterMap.clear();
-        clearMembershipLog();
+        membershipLog.clear();
 
         return true;
     }
@@ -245,7 +207,6 @@ public class MembershipService implements MembershipRMI {
     public int getNodeMembershipCounter() {
         return nodeMembershipCounter.get();
     }
-
 
     private String getMembershipCounterFilePath() {
         return "./node_storage/storage" + storageService.getNode() + "/membership_counter.txt";
@@ -255,20 +216,8 @@ public class MembershipService implements MembershipRMI {
         return "./node_storage/storage" + storageService.getNode() + "/membership_log.txt";
     }
 
-    protected void addMembershipEvent(String nodeId, int membershipCounter){
-        membershipLog.put(nodeId, membershipCounter);
-        this.writeMembershipLogToFile();
-    }
-
-    protected void clearMembershipLog(){
-        membershipLog.clear();
-        this.writeMembershipLogToFile();
-    }
-
-    protected int incrementAndGetCounter() {
-        int counter = this.nodeMembershipCounter.incrementAndGet();
-        this.writeMembershipCounterToFile(counter);
-        return counter;
+    private String getClusterMapFilePath() {
+        return "./node_storage/storage" + storageService.getNode() + "/cluster_map.txt";
     }
 
     public void setLeader() {
@@ -290,6 +239,8 @@ public class MembershipService implements MembershipRMI {
 
         while(notSent) {
             nextNode = getClusterMap().getNodeSuccessor(currentNode);
+            System.out.println("try this " + nextNode);
+            System.out.println(getClusterMap().getNodes());
             try {
                 CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
                 notSent = false;
