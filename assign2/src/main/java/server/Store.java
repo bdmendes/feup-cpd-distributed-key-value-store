@@ -20,14 +20,13 @@ public class Store {
     public static void bindRmiMethods(MembershipService membershipService){
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
-            Registry registry_temp;
-
+            Registry registryTemp;
             try {
-                registry_temp = LocateRegistry.createRegistry(1099);
+                registryTemp = LocateRegistry.createRegistry(1099);
             } catch (RemoteException e) {
-                registry_temp = LocateRegistry.getRegistry();
+                registryTemp = LocateRegistry.getRegistry();
             }
-            final Registry registry = registry_temp;
+            final Registry registry = registryTemp;
 
             String registryName = "reg" + membershipService.getStorageService().getNode().id();
             registry.rebind(registryName, stub);

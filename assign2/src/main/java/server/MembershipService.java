@@ -1,20 +1,19 @@
 package server;
 
+import communication.CommunicationUtils;
 import communication.IPAddress;
 import communication.JoinInitMembership;
 import communication.MulticastHandler;
 import message.*;
-import message.messagereader.MessageReader;
+import server.tasks.ElectionTask;
+import server.tasks.MembershipTask;
 import utils.MembershipLog;
 import utils.SentMemberships;
 import utils.StoreUtils;
 
 import java.io.*;
-import java.lang.reflect.Member;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -34,6 +33,7 @@ public class MembershipService implements MembershipRMI {
     private boolean isLeader;
     private final ScheduledExecutorService scheduler;
     private final ElectionTask electionTask = new ElectionTask(this);
+    private final MembershipTask membershipTask = new MembershipTask(this);
 
     protected MembershipService(StorageService storageService) {
         this.storageService = storageService;
@@ -58,6 +58,7 @@ public class MembershipService implements MembershipRMI {
 
         scheduler = Executors.newScheduledThreadPool(1);
         scheduler.scheduleAtFixedRate(electionTask,0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(membershipTask, 0, 1, TimeUnit.SECONDS);
     }
 
     public boolean isJoined() {
@@ -74,6 +75,10 @@ public class MembershipService implements MembershipRMI {
 
     public IPAddress getIpMulticastGroup() {
         return ipMulticastGroup;
+    }
+
+    public MulticastHandler getMulticastHandler() {
+        return multicastHandler;
     }
 
     public SentMemberships getSentMemberships() {
@@ -208,7 +213,7 @@ public class MembershipService implements MembershipRMI {
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            dispatchMessageToNodeWithoutReply(successorNode, putMessage);
+            CommunicationUtils.dispatchMessageToNodeWithoutReply(successorNode, putMessage);
             this.getStorageService().delete(hash);
         }
     }
@@ -278,50 +283,6 @@ public class MembershipService implements MembershipRMI {
         return this.isLeader;
     }
 
-    public void sendMessage(Message message, Socket socket) {
-        try {
-            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataOutputStream.write(message.encode());
-            dataOutputStream.flush();
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send message");
-        }
-    }
-
-    public Message readMessage(Socket socket) {
-        try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            MessageReader messageReader = new MessageReader();
-            while (!messageReader.isComplete()) {
-                messageReader.read(bufferedReader);
-            }
-            return MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not read message");
-        }
-    }
-
-    public void dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
-        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
-            sendMessage(message, responsibleNodeSocket);
-            Message replyMessage = readMessage(responsibleNodeSocket);
-            if (clientSocket != null) {
-                System.out.println("Sending dispatched request back to the client");
-                sendMessage(replyMessage, clientSocket);
-            }
-        } catch (IOException | RuntimeException e) {
-            throw new RuntimeException("Could not request operation to responsible node");
-        }
-    }
-
-    public void dispatchMessageToNodeWithoutReply(Node node, Message message) {
-        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
-            sendMessage(message, responsibleNodeSocket);
-        } catch (IOException e) {
-            throw new RuntimeException("Could not request operation to responsible node");
-        }
-    }
-
     public void sendToNextAvailableNode(Message message) {
         Node currentNode = getStorageService().getNode();
         Node nextNode;
@@ -330,7 +291,7 @@ public class MembershipService implements MembershipRMI {
         while(notSent) {
             nextNode = getClusterMap().getNodeSuccessor(currentNode);
             try {
-                dispatchMessageToNodeWithoutReply(nextNode, message);
+                CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
                 notSent = false;
             } catch (RuntimeException e) {
                 currentNode = nextNode;

@@ -1,7 +1,9 @@
-package server;
+package server.tasks;
 
 import message.ElectionMessage;
 import message.Message;
+import server.MembershipService;
+import server.Node;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -17,6 +19,9 @@ public class ElectionTask implements Runnable {
 
     @Override
     public void run() {
+        if(!membershipService.isJoined()) {
+            return;
+        }
         Node currentNode = membershipService.getStorageService().getNode();
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
 

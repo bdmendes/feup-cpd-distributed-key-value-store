@@ -60,7 +60,7 @@ public class MulticastHandler implements Runnable {
             try {
                 socket.receive(datagramPacket);
 
-                String stringBuffer = new String(buffer);
+                String stringBuffer = new String(buffer, 0, datagramPacket.getLength());
                 int index = stringBuffer.indexOf(MessageConstants.END_OF_LINE + MessageConstants.END_OF_LINE);
                 String headers = stringBuffer.substring(0, index);
                 byte[] body = stringBuffer.substring(index + MessageConstants.END_OF_LINE.length() * 2).getBytes();

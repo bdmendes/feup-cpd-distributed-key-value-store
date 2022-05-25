@@ -30,7 +30,8 @@ public abstract class Message {
         for (int i = 2; i < lines.length; i++) {
             if (lines[i].isEmpty()) return fields;
             String[] content = lines[i].split(": ");
-            fields.put(content[0], content[1]);
+            String value = content.length > 1 ? content[1] : "";
+            fields.put(content[0], value);
         }
 
         return fields;

@@ -23,10 +23,12 @@ public class MembershipMessage extends Message {
         nodeId = fields.get("nodeId");
         List<String> nodesRaw = List.of(nodeString.split(","));
 
-        nodesRaw.forEach(n -> {
-            String[] parts = n.split("/");
-            nodes.add(new Node(parts[0], Integer.parseInt(parts[1])));
-        });
+        if(nodesRaw.size() > 1) {
+            nodesRaw.forEach(n -> {
+                String[] parts = n.split("/");
+                nodes.add(new Node(parts[0], Integer.parseInt(parts[1])));
+            });
+        }
         MembershipLog.readMembershipLogFromData(membershipLog, data);
     }
 
