@@ -1,13 +1,8 @@
 package server.tasks;
 
 import message.ElectionMessage;
-import message.Message;
 import server.MembershipService;
 import server.Node;
-
-import java.io.DataOutputStream;
-import java.io.IOException;
-import java.net.Socket;
 
 public class ElectionTask implements Runnable {
 
@@ -19,7 +14,7 @@ public class ElectionTask implements Runnable {
 
     @Override
     public void run() {
-        if(!membershipService.isJoined()) {
+        if (!membershipService.isJoined()) {
             return;
         }
         Node currentNode = membershipService.getStorageService().getNode();
@@ -28,8 +23,6 @@ public class ElectionTask implements Runnable {
         ElectionMessage message = new ElectionMessage();
         message.setOrigin(currentNode.id());
         message.setMembershipLog(membershipService.getMembershipLog().getMap());
-
-        System.out.println("Next node " + nextNode);
 
         if (nextNode == null) {
             membershipService.setLeader();

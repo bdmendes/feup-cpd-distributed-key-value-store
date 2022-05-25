@@ -4,19 +4,20 @@ import communication.CommunicationUtils;
 import communication.IPAddress;
 import communication.JoinInitMembership;
 import communication.MulticastHandler;
-import message.*;
+import message.JoinMessage;
+import message.Message;
+import message.PutMessage;
 import server.tasks.ElectionTask;
 import server.tasks.MembershipTask;
-import utils.MembershipLog;
-import utils.SentMemberships;
-import utils.StoreUtils;
 import utils.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -30,18 +31,6 @@ public class MembershipService implements MembershipRMI {
     private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
     private boolean isLeader;
-    private final ScheduledExecutorService scheduler;
-    private final ElectionTask electionTask = new ElectionTask(this);
-    private final MembershipTask membershipTask = new MembershipTask(this);
-
-    protected MembershipService(StorageService storageService) {
-        this.storageService = storageService;
-        ipMulticastGroup = null;
-        this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
-        this.membershipLog = new MembershipLog(getMembershipLogFilePath());
-        this.clusterMap = new ClusterMap(getClusterMapFilePath());
-        scheduler = null;
-    }
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
@@ -52,13 +41,14 @@ public class MembershipService implements MembershipRMI {
         this.isLeader = false;
 
         if (ipMulticastGroup != null && isJoined()) {
-            multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
-            Thread multicastHandlerThread = new Thread(multicastHandler);
-            multicastHandlerThread.start();
+            nodeMembershipCounter.incrementAndGet();
+            join();
         }
 
-        scheduler = Executors.newScheduledThreadPool(1);
-        scheduler.scheduleAtFixedRate(electionTask,0, 10, TimeUnit.SECONDS);
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        ElectionTask electionTask = new ElectionTask(this);
+        scheduler.scheduleAtFixedRate(electionTask, 0, 10, TimeUnit.SECONDS);
+        MembershipTask membershipTask = new MembershipTask(this);
         scheduler.scheduleAtFixedRate(membershipTask, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -133,7 +123,7 @@ public class MembershipService implements MembershipRMI {
         int counter = nodeMembershipCounter.incrementAndGet();
 
         JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
-        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,2000);
+        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler, 2000);
         Thread messageReceiverThread = new Thread(messageReceiver);
         messageReceiverThread.start();
 
@@ -160,7 +150,7 @@ public class MembershipService implements MembershipRMI {
 
     private void transferAllMyKeysToMySuccessor() {
         Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
-        if (successorNode.equals(this.storageService.getNode())){
+        if (successorNode.equals(this.storageService.getNode())) {
             return;
         }
 
@@ -237,10 +227,8 @@ public class MembershipService implements MembershipRMI {
         Node nextNode;
         boolean notSent = true;
 
-        while(notSent) {
+        while (notSent) {
             nextNode = getClusterMap().getNodeSuccessor(currentNode);
-            System.out.println("try this " + nextNode);
-            System.out.println(getClusterMap().getNodes());
             try {
                 CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
                 notSent = false;

@@ -56,27 +56,24 @@ public class ClusterMap {
         return this.getNodeSuccessor(nodeHash);
     }
 
-    public Node getNodeResponsibleForHash(String hash){
+    public Node getNodeResponsibleForHash(String hash) {
         return this.getNodeSuccessor(hash);
     }
 
     private Node getNodeSuccessor(String hash) {
-        if (clusterNodes.isEmpty()){
+        if (clusterNodes.isEmpty()) {
             return null;
         }
-        Map.Entry<String, Node> lastEntry = null;
 
-        for (Map.Entry<String,Node> entry : clusterNodes.entrySet()) {
+        for (Map.Entry<String, Node> entry : clusterNodes.entrySet()) {
             String currentNodeHash = entry.getKey();
-            lastEntry = entry;
             Node currentNode = entry.getValue();
-            if (currentNodeHash.compareTo(hash) > 0){
-                System.out.println("sou a hash " + hash + " e encontrei esta hash a seguir a mim " + currentNodeHash);
+            if (currentNodeHash.compareTo(hash) > 0) {
                 return currentNode;
             }
         }
 
-        return lastEntry.getValue();
+        return clusterNodes.values().iterator().next();
     }
 
     private void readFromFile() {
@@ -93,7 +90,7 @@ public class ClusterMap {
             String[] line = scanner.nextLine().split(" ");
             String nodeId = line[0];
             int port = Integer.parseInt(line[1]);
-            clusterNodes.put(nodeId, new Node(nodeId, port));
+            this.put(new Node(nodeId, port));
         }
         scanner.close();
     }

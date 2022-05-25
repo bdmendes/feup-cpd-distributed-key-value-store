@@ -201,9 +201,12 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket dummy) {
-        System.out.println("Received membership message");
-        Map<String, Integer> recentLogs = this.membershipService.getMembershipLog(32);
+        if (membershipMessage.getNodeId().equals(this.membershipService.getStorageService().getNode().id())) {
+            System.out.println("Received membership message from myself");
+            return;
+        }
 
+        Map<String, Integer> recentLogs = this.membershipService.getMembershipLog(32);
         for (Node node : membershipMessage.getNodes()) {
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
@@ -229,6 +232,8 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 }
             }
         }
+
+        System.out.println("Received membership message " + membershipService.getMembershipLog().getMap().entrySet());
     }
 
     private void transferKeysToJoiningNode(Node joiningNode) {
@@ -275,19 +280,14 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     public void processElection(ElectionMessage electionMessage, Socket socket) {
         Map<String, Integer> incomingMembershipLog = electionMessage.getMembershipLog();
         String origin = electionMessage.getOrigin();
-        System.out.println(origin);
 
         Node currentNode = membershipService.getStorageService().getNode();
-        System.out.println(currentNode);
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
-        System.out.println(nextNode);
-
-        System.out.println("Origin: " + origin + "; next node: " + nextNode);
+        System.out.println("Received election message from: " + origin + "; dispatching to next node: " + nextNode);
         if (origin.equals(currentNode.id())) {
             membershipService.setLeader();
             LeaderMessage message = new LeaderMessage();
             message.setLeaderNode(origin);
-            System.out.println("here " + message + " " + nextNode);
             this.membershipService.sendToNextAvailableNode(message);
             return;
         }
