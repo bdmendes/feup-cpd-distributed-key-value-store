@@ -27,6 +27,7 @@ public class MembershipTask implements Runnable {
 
         try {
             membershipService.getMulticastHandler().sendMessage(membershipMessage);
+            System.out.println("Sent membership message");
         } catch (IOException e) {
             System.out.println("Could not send multicast from leader");
         }

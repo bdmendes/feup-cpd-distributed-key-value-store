@@ -22,7 +22,7 @@ class MembershipMessageTest {
     @BeforeEach
     void generate() {
         nodes = new HashSet<>();
-        membershipLog = new MembershipLog();
+        membershipLog = new MembershipLog(null);
         membershipLog.put("0", 0);
         membershipLog.put("1", 0);
         nodes.add(new Node("0", -1));

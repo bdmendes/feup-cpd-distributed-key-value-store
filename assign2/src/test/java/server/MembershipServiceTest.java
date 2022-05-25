@@ -40,20 +40,20 @@ public class MembershipServiceTest {
         MembershipService service3;
 
         StorageService storageService = new StorageService(new Node("-1", -1));
-        service = new MembershipService(storageService);
+        service = new MembershipService(storageService, null);
 
-        service.incrementAndGetCounter();
-        service.incrementAndGetCounter();
+        service.getMembershipCounter().incrementAndGet();
+        service.getMembershipCounter().incrementAndGet();
 
         assertEquals(1, service.getNodeMembershipCounter());
 
-        service2 = new MembershipService(storageService);
+        service2 = new MembershipService(storageService, null);
 
         assertEquals(1, service2.getNodeMembershipCounter());
 
-        service2.incrementAndGetCounter();
+        service2.getMembershipCounter().incrementAndGet();
 
-        service3 = new MembershipService(storageService);
+        service3 = new MembershipService(storageService, null);
         assertEquals(2, service3.getNodeMembershipCounter());
     }
 
@@ -63,8 +63,8 @@ public class MembershipServiceTest {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
 
-        service.addMembershipEvent("0", 0);
-        service.addMembershipEvent("2", 3);
+        service.getMembershipLog().put("0", 0);
+        service.getMembershipLog().put("2", 3);
 
         Map<String, Integer> membershipLog = service.getMembershipLog(32);
         assertEquals(2, membershipLog.size());
@@ -95,7 +95,7 @@ public class MembershipServiceTest {
         MembershipService service = new MembershipService(storageService, new IPAddress("", 0));
 
         for (int i = 0; i < 40; i++) {
-            service.addMembershipEvent(Integer.toString(i), i);
+            service.getMembershipLog().put(Integer.toString(i), i);
         }
 
         var valuesList = service.getMembershipLog(32).values().stream().toList();
@@ -108,8 +108,8 @@ public class MembershipServiceTest {
     void testMembershipMergeNewNode() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
-        membershipService.addMembershipEvent("1", 0);
+        membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getMembershipLog().put("1", 0);
 
         Set<Node> messageNodes = new HashSet<>();
         messageNodes.add(new Node("1", -1));
@@ -132,10 +132,10 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeLeft() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
-        membershipService.getClusterMap().add(new Node("2", -1));
-        membershipService.addMembershipEvent("1", 0);
-        membershipService.addMembershipEvent("2", 0);
+        membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("2", -1));
+        membershipService.getMembershipLog().put("1", 0);
+        membershipService.getMembershipLog().put("2", 0);
 
         Set<Node> messageNodes = new HashSet<>();
         messageNodes.add(new Node("1", -1));
@@ -156,9 +156,9 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeJoined() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
-        membershipService.addMembershipEvent("1", 0);
-        membershipService.addMembershipEvent("2", 1);
+        membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getMembershipLog().put("1", 0);
+        membershipService.getMembershipLog().put("2", 1);
 
         Set<Node> messageNodes = new HashSet<>();
         messageNodes.add(new Node("1", -1));
@@ -180,10 +180,10 @@ public class MembershipServiceTest {
     void testMembershipMergeOlderNodeEvent() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService, new IPAddress("", 0));
-        membershipService.getClusterMap().add(new Node("1", -1));
-        membershipService.getClusterMap().add(new Node("2", -1));
-        membershipService.addMembershipEvent("1", 0);
-        membershipService.addMembershipEvent("2", 2);
+        membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("2", -1));
+        membershipService.getMembershipLog().put("1", 0);
+        membershipService.getMembershipLog().put("2", 2);
 
         Set<Node> messageNodes = new HashSet<>();
         messageNodes.add(new Node("1", -1));
