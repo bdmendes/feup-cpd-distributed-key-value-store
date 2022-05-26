@@ -25,7 +25,7 @@ public class ElectionTask implements Runnable {
         message.setMembershipLog(membershipService.getMembershipLog().getMap());
 
         if (nextNode == null) {
-            membershipService.setLeader();
+            membershipService.setLeader(true);
             return;
         }
 

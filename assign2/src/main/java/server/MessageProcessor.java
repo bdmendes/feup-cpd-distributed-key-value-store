@@ -285,7 +285,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
         System.out.println("Received election message from: " + origin + "; dispatching to next node: " + nextNode);
         if (origin.equals(currentNode.id())) {
-            membershipService.setLeader();
+            membershipService.setLeader(true);
             LeaderMessage message = new LeaderMessage();
             message.setLeaderNode(origin);
             this.membershipService.sendToNextAvailableNode(message);
@@ -319,14 +319,9 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             System.out.println(membershipService.getStorageService().getNode().id() + " is leader.");
             return;
         }
-
-        membershipService.unsetLeader();
         System.out.println(membershipService.getStorageService().getNode().id() + " is not leader.");
 
-        Node currentNode = membershipService.getStorageService().getNode();
-        Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
-
-
+        membershipService.setLeader(false);
         this.membershipService.sendToNextAvailableNode(leaderMessage);
     }
 

@@ -44,6 +44,7 @@ public class ClusterMap {
 
     public void clear() {
         clusterNodes.clear();
+        this.writeToFile();
     }
 
     public Node getNodeSuccessor(Node node) {

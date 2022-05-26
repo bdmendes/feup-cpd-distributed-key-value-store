@@ -16,11 +16,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
@@ -30,7 +30,7 @@ public class MembershipService implements MembershipRMI {
     private final IPAddress ipMulticastGroup;
     private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
-    private boolean isLeader;
+    private final AtomicBoolean isLeader = new AtomicBoolean(false);
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
@@ -38,9 +38,10 @@ public class MembershipService implements MembershipRMI {
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
         this.membershipLog = new MembershipLog(getMembershipLogFilePath());
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
-        this.isLeader = false;
 
         if (ipMulticastGroup != null && isJoined()) {
+            clusterMap.clear();
+            membershipLog.clear();
             nodeMembershipCounter.incrementAndGet();
             join();
         }
@@ -68,10 +69,6 @@ public class MembershipService implements MembershipRMI {
         return nodeMembershipCounter;
     }
 
-    public IPAddress getIpMulticastGroup() {
-        return ipMulticastGroup;
-    }
-
     public MulticastHandler getMulticastHandler() {
         return multicastHandler;
     }
@@ -82,11 +79,6 @@ public class MembershipService implements MembershipRMI {
 
     public Map<String, Integer> getMembershipLog(int numberOfLogs) {
         return membershipLog.getMostRecentLogs(numberOfLogs);
-    }
-
-
-    public Map<String, Integer> cloneLog() {
-        return new LinkedHashMap<>(membershipLog.getMap());
     }
 
     /**
@@ -165,7 +157,7 @@ public class MembershipService implements MembershipRMI {
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            CommunicationUtils.dispatchMessageToNodeWithoutReply(successorNode, putMessage);
+            CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
             this.getStorageService().delete(hash);
         }
     }
@@ -210,16 +202,12 @@ public class MembershipService implements MembershipRMI {
         return "./node_storage/storage" + storageService.getNode() + "/cluster_map.txt";
     }
 
-    public void setLeader() {
-        this.isLeader = true;
-    }
-
-    public void unsetLeader() {
-        this.isLeader = false;
+    public void setLeader(boolean isLeader) {
+        this.isLeader.set(isLeader);
     }
 
     public boolean isLeader() {
-        return this.isLeader;
+        return this.isLeader.get();
     }
 
     public void sendToNextAvailableNode(Message message) {
