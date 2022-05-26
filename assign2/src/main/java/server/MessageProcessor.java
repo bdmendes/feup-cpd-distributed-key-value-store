@@ -46,7 +46,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
 
         Node newNode = new Node(joinMessage.getNodeId(), joinMessage.getPort());
-
         this.membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
         this.membershipService.getClusterMap().put(newNode);
 
@@ -62,7 +61,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             }
 
             MembershipMessage membershipMessage = new MembershipMessage();
-
             membershipMessage.setMembershipLog(membershipService.getMembershipLog(32));
             membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
             membershipMessage.setNodeId(membershipService.getStorageService().getNode().id());
@@ -72,8 +70,8 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                     joinMessage.getCounter(),
                     this.membershipService.getMembershipLog().totalCounter()
             );
-            System.out.println("sent membership message to " + joinMessage.getNodeId());
 
+            System.out.println("sent membership message to " + joinMessage.getNodeId());
 
             if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
                     .equals(membershipService.getStorageService().getNode())) {
@@ -238,21 +236,24 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
     private void transferKeysToJoiningNode(Node joiningNode) {
         String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
+        String thisNodeHash = StoreUtils.sha256(membershipService.getStorageService()
+                .getNode().id().getBytes(StandardCharsets.UTF_8));
         for (String hash : membershipService.getStorageService().getHashes()) {
-            if (joiningNodeHash.compareTo(hash) > 0) {
-                PutMessage putMessage = new PutMessage();
-                try {
-                    File file = new File(membershipService.getStorageService().getValueFilePath(hash));
-                    byte[] bytes = Files.readAllBytes(file.toPath());
-                    String key = StoreUtils.sha256(bytes);
-                    putMessage.setKey(key);
-                    putMessage.setValue(bytes);
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("File not found");
-                }
-                CommunicationUtils.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
-                this.membershipService.getStorageService().delete(hash);
+            if (hash.compareTo(joiningNodeHash) >= 0 && hash.compareTo(thisNodeHash) <= 0) {
+                continue;
             }
+            PutMessage putMessage = new PutMessage();
+            try {
+                File file = new File(membershipService.getStorageService().getValueFilePath(hash));
+                byte[] bytes = Files.readAllBytes(file.toPath());
+                String key = StoreUtils.sha256(bytes);
+                putMessage.setKey(key);
+                putMessage.setValue(bytes);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("File not found");
+            }
+            CommunicationUtils.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
+            this.membershipService.getStorageService().delete(hash);
         }
     }
 

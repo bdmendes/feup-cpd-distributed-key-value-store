@@ -131,6 +131,7 @@ public class MembershipService implements MembershipRMI {
         clusterMap.put(storageService.getNode());
         membershipLog.put(storageService.getNode().id(), counter);
 
+        System.out.println("Joined cluster");
         System.out.println(this.getClusterMap().getNodes());
         System.out.println(this.getMembershipLog(32));
 
@@ -182,6 +183,8 @@ public class MembershipService implements MembershipRMI {
 
         clusterMap.clear();
         membershipLog.clear();
+
+        System.out.println("Left cluster");
 
         return true;
     }
