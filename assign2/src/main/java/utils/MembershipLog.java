@@ -23,7 +23,7 @@ public class MembershipLog {
         return membershipLog;
     }
 
-    public Integer put(String nodeId, Integer nodeMembershipCounter) {
+    public synchronized Integer put(String nodeId, Integer nodeMembershipCounter) {
         membershipLog.remove(nodeId);
         Integer status = membershipLog.put(nodeId, nodeMembershipCounter);
         writeToFile();
@@ -34,27 +34,35 @@ public class MembershipLog {
         return membershipLog.get(nodeId);
     }
 
-    public void clear() {
+    public synchronized void clear() {
         membershipLog.clear();
         this.writeToFile();
     }
 
     public int totalCounter() {
-        return membershipLog.values().stream().mapToInt(Integer::intValue).sum();
+        Collection<Integer> values = membershipLog.values();
+
+        synchronized (membershipLog) {
+            return values.stream().mapToInt(Integer::intValue).sum();
+        }
     }
 
     public Map<String, Integer> getMostRecentLogs(int numberOfLogs) {
         Map<String, Integer> mostRecentLogs = new LinkedHashMap<>();
         int counter = 0;
-        int size = membershipLog.size();
-        int start = size - numberOfLogs;
 
-        for (Map.Entry<String, Integer> entry : membershipLog.entrySet()) {
-            if (counter >= start) {
-                mostRecentLogs.put(entry.getKey(), entry.getValue());
+        synchronized (membershipLog) {
+            int size = membershipLog.size();
+            int start = size - numberOfLogs;
+
+            for (Map.Entry<String, Integer> entry : membershipLog.entrySet()) {
+                if (counter >= start) {
+                    mostRecentLogs.put(entry.getKey(), entry.getValue());
+                }
+                counter++;
             }
-            counter++;
         }
+
         return mostRecentLogs;
     }
 

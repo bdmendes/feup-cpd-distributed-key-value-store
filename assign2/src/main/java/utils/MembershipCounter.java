@@ -19,18 +19,18 @@ public class MembershipCounter {
         return counter.get();
     }
 
-    public void set(int newValue) {
+    public synchronized void set(int newValue) {
         counter.set(newValue);
         writeToFile();
     }
 
-    public int getAndIncrement() {
+    public synchronized int getAndIncrement() {
         int c = counter.getAndIncrement();
         writeToFile();
         return c;
     }
 
-    public int incrementAndGet() {
+    public synchronized int incrementAndGet() {
         int c = counter.incrementAndGet();
         writeToFile();
         return c;
