@@ -19,6 +19,28 @@ public class MembershipLog {
         this.filePath = filePath;
         this.readFromFile();
     }
+
+    public static void readMembershipLogFromData(Map<String, Integer> membershipLog, byte[] data) {
+        Scanner scanner = new Scanner(new String(data, StandardCharsets.UTF_8));
+        while (scanner.hasNextLine()) {
+            String[] line = scanner.nextLine().split(" ");
+            String nodeId = line[0];
+            int counter = Integer.parseInt(line[1]);
+            membershipLog.put(nodeId, counter);
+        }
+        scanner.close();
+    }
+
+    public static byte[] writeMembershipLogToData(Map<String, Integer> membershipLog) {
+        StringBuilder stringBuilder = new StringBuilder();
+        membershipLog.forEach((key, value) -> stringBuilder.append(key)
+                .append(" ")
+                .append(value)
+                .append(MessageConstants.END_OF_LINE));
+
+        return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
     public Map<String, Integer> getMap() {
         return membershipLog;
     }
@@ -66,29 +88,8 @@ public class MembershipLog {
         return mostRecentLogs;
     }
 
-    public static void readMembershipLogFromData(Map<String, Integer> membershipLog, byte[] data) {
-        Scanner scanner = new Scanner(new String(data, StandardCharsets.UTF_8));
-        while (scanner.hasNextLine()) {
-            String[] line = scanner.nextLine().split(" ");
-            String nodeId = line[0];
-            int counter = Integer.parseInt(line[1]);
-            membershipLog.put(nodeId, counter);
-        }
-        scanner.close();
-    }
-
-    public static byte[] writeMembershipLogToData(Map<String, Integer> membershipLog) {
-        StringBuilder stringBuilder = new StringBuilder();
-        membershipLog.forEach((key, value) -> stringBuilder.append(key)
-                .append(" ")
-                .append(value)
-                .append(MessageConstants.END_OF_LINE));
-
-        return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
     private void readFromFile() {
-        if (filePath == null){
+        if (filePath == null) {
             return;
         }
         byte[] bytes;
@@ -101,7 +102,7 @@ public class MembershipLog {
     }
 
     private void writeToFile() {
-        if (filePath == null){
+        if (filePath == null) {
             return;
         }
         byte[] bytes = MembershipLog.writeMembershipLogToData(membershipLog);

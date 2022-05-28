@@ -2,7 +2,6 @@ package server;
 
 import communication.CommunicationUtils;
 import communication.IPAddress;
-import communication.JoinInitMembership;
 import communication.MulticastHandler;
 import message.JoinMessage;
 import message.Message;
@@ -11,13 +10,15 @@ import server.state.InitNodeState;
 import server.state.NodeState;
 import server.tasks.ElectionTask;
 import server.tasks.MembershipTask;
+import server.tasks.MessageReceiverTask;
 import utils.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -25,16 +26,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MembershipService implements MembershipRMI {
+    public final Object joinLeaveLock = new Object();
     private final StorageService storageService;
     private final MembershipCounter nodeMembershipCounter;
     private final MembershipLog membershipLog;
     private final ClusterMap clusterMap;
-    private final IPAddress ipMulticastGroup;
     private final SentMemberships sentMemberships = new SentMemberships();
-    private MulticastHandler multicastHandler;
+    private final IPAddress ipMulticastGroup;
     private final AtomicBoolean isLeader = new AtomicBoolean(false);
+    private final MessageReceiverTask messageReceiverTask;
     private NodeState nodeState;
-    public final Object joinLeaveLock = new Object();
+    private MulticastHandler multicastHandler;
 
     protected MembershipService(StorageService storageService) {
         this.storageService = storageService;
@@ -42,15 +44,19 @@ public class MembershipService implements MembershipRMI {
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
         this.membershipLog = new MembershipLog(getMembershipLogFilePath());
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
+        this.messageReceiverTask = null;
     }
 
-    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
+    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) throws IOException {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
         this.membershipLog = new MembershipLog(getMembershipLogFilePath());
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
         this.nodeState = new InitNodeState(this);
+        this.messageReceiverTask = new MessageReceiverTask(this, socket);
+        Thread messageReceiverThread = new Thread(this.messageReceiverTask);
+        messageReceiverThread.start();
 
         if (isJoined()) {
             nodeMembershipCounter.incrementAndGet();
@@ -96,6 +102,14 @@ public class MembershipService implements MembershipRMI {
         return membershipLog.getMostRecentLogs(numberOfLogs);
     }
 
+    public NodeState getNodeState() {
+        return nodeState;
+    }
+
+    public void setNodeState(NodeState nodeState) {
+        this.nodeState = nodeState;
+    }
+
     /**
      * @return the full membership log map.
      */
@@ -113,57 +127,13 @@ public class MembershipService implements MembershipRMI {
     }
 
     @Override
-    public boolean join() throws IOException {
+    public boolean join() {
         return nodeState.join();
     }
 
-    private void transferAllMyKeysToMySuccessor() {
-        Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
-        if (successorNode.equals(this.storageService.getNode())) {
-            return;
-        }
-
-        for (String hash : getStorageService().getHashes()) {
-            PutMessage putMessage = new PutMessage();
-            try {
-                File file = new File(getStorageService().getValueFilePath(hash));
-                byte[] bytes = Files.readAllBytes(file.toPath());
-                String key = StoreUtils.sha256(bytes);
-                putMessage.setKey(key);
-                putMessage.setValue(bytes);
-            } catch (IOException e) {
-                throw new IllegalArgumentException("File not found");
-            }
-            CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
-            this.getStorageService().delete(hash);
-        }
-    }
-
     @Override
-    public boolean leave() throws IOException {
-        if (!isJoined()) {
-            return false;
-        }
-
-        try {
-            nodeMembershipCounter.incrementAndGet();
-            JoinMessage message = createJoinMessage(-1);
-            this.multicastHandler.sendMessage(message);
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-
-        multicastHandler.close();
-
-        this.transferAllMyKeysToMySuccessor();
-
-        clusterMap.clear();
-        membershipLog.clear();
-
-        System.out.println("Left cluster");
-
-        return true;
+    public boolean leave() {
+        return nodeState.leave();
     }
 
     public int getNodeMembershipCounter() {
@@ -182,12 +152,12 @@ public class MembershipService implements MembershipRMI {
         return "./node_storage/storage" + storageService.getNode() + "/cluster_map.txt";
     }
 
-    public void setLeader(boolean isLeader) {
-        this.isLeader.set(isLeader);
-    }
-
     public boolean isLeader() {
         return this.isLeader.get();
+    }
+
+    public void setLeader(boolean isLeader) {
+        this.isLeader.set(isLeader);
     }
 
     public void sendToNextAvailableNode(Message message) {
@@ -206,4 +176,51 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
+    public void transferKeysToJoiningNode(Node joiningNode) {
+        String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
+        String thisNodeHash = StoreUtils.sha256(this.getStorageService()
+                .getNode().id().getBytes(StandardCharsets.UTF_8));
+        for (String hash : this.getStorageService().getHashes()) {
+            if (hash.compareTo(joiningNodeHash) >= 0 && hash.compareTo(thisNodeHash) <= 0) {
+                continue;
+            }
+            PutMessage putMessage = new PutMessage();
+            try {
+                File file = new File(this.getStorageService().getValueFilePath(hash));
+                byte[] bytes = Files.readAllBytes(file.toPath());
+                String key = StoreUtils.sha256(bytes);
+                putMessage.setKey(key);
+                putMessage.setValue(bytes);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("File not found");
+            }
+            CommunicationUtils.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
+            this.getStorageService().delete(hash);
+        }
+    }
+
+    public void transferAllMyKeysToMySuccessor() {
+        Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
+        if (successorNode.equals(this.storageService.getNode())) {
+            System.out.println("No successor node found");
+            return;
+        }
+
+        for (String hash : getStorageService().getHashes()) {
+            PutMessage putMessage = new PutMessage();
+            try {
+                File file = new File(getStorageService().getValueFilePath(hash));
+                byte[] bytes = Files.readAllBytes(file.toPath());
+                String key = StoreUtils.sha256(bytes);
+                putMessage.setKey(key);
+                putMessage.setValue(bytes);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("File not found");
+            }
+            CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
+            System.out.println(Arrays.toString(putMessage.encode()));
+            System.out.println(successorNode.id());
+            this.getStorageService().delete(hash);
+        }
+    }
 }

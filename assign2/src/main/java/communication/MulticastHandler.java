@@ -1,27 +1,27 @@
 package communication;
 
-import message.*;
+import message.Message;
+import message.MessageConstants;
+import message.MessageFactory;
 import server.MembershipService;
 import server.MessageProcessor;
 import server.Node;
 
-import javax.xml.crypto.Data;
 import java.io.IOException;
 import java.net.*;
-import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class MulticastHandler implements Runnable {
+    private static final int MAX_BUF_LEN = 2000;
     private final MulticastSocket socket;
     private final MembershipService membershipService;
     private final InetSocketAddress multicastAddress;
     private final NetworkInterface networkInterface;
     private boolean running = true;
-    private static final int MAX_BUF_LEN = 2000;
 
     public MulticastHandler(Node node, IPAddress multicastAddress, MembershipService service) throws IOException {
-        InetAddress address  = InetAddress.getByName(node.id());
+        InetAddress address = InetAddress.getByName(node.id());
         networkInterface = NetworkInterface.getByInetAddress(address);
         if (networkInterface == null) {
             System.err.println("The specified ip address is not bound to any network interface on your machine");
@@ -54,7 +54,7 @@ public class MulticastHandler implements Runnable {
     public void run() {
         ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
 
-        while(running) {
+        while (running) {
             byte[] buffer = new byte[MAX_BUF_LEN];
             DatagramPacket datagramPacket = new DatagramPacket(buffer, MAX_BUF_LEN);
             try {

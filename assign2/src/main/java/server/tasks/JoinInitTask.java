@@ -1,11 +1,12 @@
-package communication;
+package server.tasks;
 
+import communication.MulticastHandler;
 import message.MembershipMessage;
 import message.Message;
 import message.MessageFactory;
 import message.messagereader.MessageReader;
 import server.MembershipService;
-import server.MessageProcessor;
+import server.state.CommonState;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,7 +17,7 @@ import java.net.SocketTimeoutException;
 import java.util.HashSet;
 import java.util.Set;
 
-public class JoinInitMembership implements Runnable {
+public class JoinInitTask implements Runnable {
     private final int blockMiliseconds;
     private final ServerSocket serverSocket;
     private final MembershipService membershipService;
@@ -24,7 +25,7 @@ public class JoinInitMembership implements Runnable {
     private final Message retransmitMessage;
     private boolean running;
 
-    public JoinInitMembership(MembershipService service, ServerSocket socket, Message retransmit, int blockMiliseconds){
+    public JoinInitTask(MembershipService service, ServerSocket socket, Message retransmit, int blockMiliseconds) {
         this.membershipService = service;
         this.blockMiliseconds = blockMiliseconds;
         this.multicastHandler = service.getMulticastHandler();
@@ -38,13 +39,13 @@ public class JoinInitMembership implements Runnable {
         Socket clientSocket;
         try {
             clientSocket = serverSocket.accept();
-        } catch (SocketTimeoutException e){
+        } catch (SocketTimeoutException e) {
             return null;
         }
         BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         MessageReader messageReader = new MessageReader();
 
-        while(!messageReader.isComplete()) {
+        while (!messageReader.isComplete()) {
             messageReader.read(in);
         }
 
@@ -62,7 +63,7 @@ public class JoinInitMembership implements Runnable {
         int received = 0;
         Set<String> receivedMessages = new HashSet<>();
 
-        while(retransmitted <= 3 && received < 3 && running) {
+        while (retransmitted <= 3 && received < 3 && running) {
             Message receivedMessage;
 
             try {
@@ -72,8 +73,8 @@ public class JoinInitMembership implements Runnable {
                 continue;
             }
 
-            if(receivedMessage == null) {
-                if(retransmitted == 3) {
+            if (receivedMessage == null) {
+                if (retransmitted == 3) {
                     break;
                 }
 
@@ -89,20 +90,27 @@ public class JoinInitMembership implements Runnable {
                 continue;
             }
 
-            MessageProcessor processor = new MessageProcessor(membershipService, receivedMessage, null);
-            processor.run();
-
-            if(receivedMessages.contains(((MembershipMessage) receivedMessage).getNodeId())) {
+            MembershipMessage membershipMessage;
+            try {
+                membershipMessage = (MembershipMessage) receivedMessage;
+            } catch (ClassCastException e) {
                 continue;
             }
 
-            receivedMessages.add(((MembershipMessage) receivedMessage).getNodeId());
+            CommonState.processMembership(membershipMessage, this.membershipService);
+
+            if (receivedMessages.contains(membershipMessage.getNodeId())) {
+                continue;
+            }
+
+            receivedMessages.add(membershipMessage.getNodeId());
             received++;
         }
 
         System.out.println("Received " + received + " messages");
         System.out.println(this.membershipService.getClusterMap().getNodes());
         System.out.println(this.membershipService.getMembershipLog(32));
+
         try {
             this.close();
         } catch (IOException e) {

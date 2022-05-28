@@ -1,7 +1,7 @@
 package client;
 
-import communication.RMIAddress;
 import communication.IPAddress;
+import communication.RMIAddress;
 import message.*;
 import message.messagereader.MessageReader;
 import server.MembershipRMI;
@@ -15,14 +15,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class TestClient {
-    private record ClientArgs(String host, String operation, String operand) {
-        public ClientArgs(String host, String operation) {
-            this(host, operation, null);
-        }
-    }
-
     private static void printUsage() {
-            System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
+        System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
     }
 
     private static ClientArgs parseArgs(String[] args) {
@@ -172,6 +166,12 @@ public class TestClient {
                 System.out.println("Unknown host");
                 System.exit(1);
             }
+        }
+    }
+
+    private record ClientArgs(String host, String operation, String operand) {
+        public ClientArgs(String host, String operation) {
+            this(host, operation, null);
         }
     }
 }

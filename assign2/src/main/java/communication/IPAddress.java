@@ -16,7 +16,7 @@ public class IPAddress extends Address {
     public IPAddress(String address) throws UnknownHostException {
         Matcher matcher = getMatcher(address);
 
-        if (matcher.find()){
+        if (matcher.find()) {
             this.ip = InetAddress.getByName(matcher.group(1));
             try {
                 this.port = Integer.parseInt(matcher.group(2));

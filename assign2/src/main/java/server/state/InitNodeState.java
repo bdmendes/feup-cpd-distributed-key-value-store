@@ -1,22 +1,39 @@
 package server.state;
 
-import communication.JoinInitMembership;
-import message.JoinMessage;
+import communication.CommunicationUtils;
+import message.*;
 import server.MembershipService;
+import server.tasks.JoinInitTask;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
+import java.net.Socket;
 
-public class InitNodeState extends NotInClusterState {
+public class InitNodeState extends NodeState {
     public InitNodeState(MembershipService membershipService) {
         super(membershipService);
     }
 
     @Override
+    public void processPut(PutMessage putMessage, Socket socket) {
+        CommunicationUtils.sendErrorResponse(new PutReply(), StatusCode.NODE_NOT_JOINED, putMessage.getKey(), socket);
+    }
+
+    @Override
+    public void processGet(GetMessage getMessage, Socket socket) {
+        CommunicationUtils.sendErrorResponse(new PutReply(), StatusCode.NODE_NOT_JOINED, getMessage.getKey(), socket);
+    }
+
+    @Override
+    public void processDelete(DeleteMessage deleteMessage, Socket socket) {
+        CommunicationUtils.sendErrorResponse(new DeleteReply(), StatusCode.NODE_NOT_JOINED, deleteMessage.getKey(), socket);
+    }
+
+    @Override
     public boolean join() {
         synchronized (this.membershipService.joinLeaveLock) {
-            if(this.membershipService.isJoined()) {
+            if (this.membershipService.isJoined()) {
                 return true;
             }
 
@@ -34,9 +51,9 @@ public class InitNodeState extends NotInClusterState {
 
             JoinMessage joinMessage = membershipService.createJoinMessage(serverSocket.getLocalPort());
 
-            JoinInitMembership messageReceiver = new JoinInitMembership(this.membershipService, serverSocket, joinMessage, 2000);
-            Thread messageReceiverThread = new Thread(messageReceiver);
-            messageReceiverThread.start();
+            JoinInitTask joinInitTask = new JoinInitTask(this.membershipService, serverSocket, joinMessage, 2000);
+            Thread joinInitThread = new Thread(joinInitTask);
+            joinInitThread.start();
 
             this.membershipService.getClusterMap().put(storageService.getNode());
             this.membershipService.getMembershipLog().put(storageService.getNode().id(), counter);
@@ -53,7 +70,7 @@ public class InitNodeState extends NotInClusterState {
                 }
 
                 try {
-                    messageReceiver.close();
+                    joinInitTask.close();
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
@@ -66,10 +83,25 @@ public class InitNodeState extends NotInClusterState {
                 return false;
             }
 
-            //Thread multicastHandlerThread = new Thread(this.membershipService.getMulticastHandler());
-            //multicastHandlerThread.start();
+            try {
+                joinInitThread.join();
+            } catch (InterruptedException e) {
+                return false;
+            }
+
+            this.membershipService.setNodeState(new JoinedNodeState(this.membershipService));
         }
 
         return true;
+    }
+
+    @Override
+    public boolean leave() {
+        return true;
+    }
+
+    @Override
+    public boolean joined() {
+        return false;
     }
 }

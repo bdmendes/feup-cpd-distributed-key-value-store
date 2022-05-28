@@ -34,7 +34,7 @@ public class ClientMessageVisitor implements MessageVisitor {
 
     @Override
     public void processGetReply(GetReply getReply, Socket socket) {
-        if(getReply.getStatusCode() == StatusCode.OK) {
+        if (getReply.getStatusCode() == StatusCode.OK) {
             System.out.println("GET SUCCESS FOR " + getReply.getKey());
             System.out.println("VALUE:");
             System.out.println(new String(getReply.getValue(), StandardCharsets.UTF_8));
@@ -45,7 +45,7 @@ public class ClientMessageVisitor implements MessageVisitor {
 
     @Override
     public void processPutReply(PutReply putReply, Socket socket) {
-        if(putReply.getStatusCode() == StatusCode.OK) {
+        if (putReply.getStatusCode() == StatusCode.OK) {
             System.out.println("PUT SUCCESS FOR " + putReply.getKey());
         } else {
             System.out.println("PUT FAILURE: " + putReply.getStatusCode());
@@ -68,8 +68,10 @@ public class ClientMessageVisitor implements MessageVisitor {
     }
 
     @Override
-    public void processElection(ElectionMessage electionMessage, Socket socket) {}
+    public void processElection(ElectionMessage electionMessage, Socket socket) {
+    }
 
     @Override
-    public void processLeader(LeaderMessage leaderMessage, Socket socket) {}
+    public void processLeader(LeaderMessage leaderMessage, Socket socket) {
+    }
 }

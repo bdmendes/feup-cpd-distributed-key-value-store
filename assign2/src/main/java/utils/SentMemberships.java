@@ -1,15 +1,10 @@
 package utils;
 
-import message.JoinMessage;
-
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SentMemberships {
-    private record SentMembership(int totalMembershipCounter, int nodeMembershipCounter) {}
-
     private final Map<String, SentMembership> sentMemberships = new ConcurrentHashMap<>();
 
     public void saveSentMembership(String nodeId, int nodeMembershipCounter, int totalMembershipCounter) {
@@ -21,5 +16,8 @@ public class SentMemberships {
         return !Objects.isNull(sentMembership)
                 && sentMembership.totalMembershipCounter == totalMembershipCounter
                 && sentMembership.nodeMembershipCounter == nodeMembershipCounter;
+    }
+
+    private record SentMembership(int totalMembershipCounter, int nodeMembershipCounter) {
     }
 }

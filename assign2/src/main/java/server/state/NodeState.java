@@ -23,8 +23,8 @@ public abstract class NodeState implements MessageVisitor {
     }
 
     public abstract boolean join();
+
     public abstract boolean leave();
 
-    public abstract boolean canSendMembership();
-    public abstract boolean canSendElection();
+    public abstract boolean joined();
 }

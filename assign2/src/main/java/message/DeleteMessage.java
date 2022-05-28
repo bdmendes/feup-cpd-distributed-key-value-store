@@ -20,6 +20,10 @@ public class DeleteMessage extends Message {
         return key;
     }
 
+    public void setKey(String key) {
+        this.key = key;
+    }
+
     @Override
     public byte[] encode() {
         HashMap<String, String> headers = new HashMap<>();
@@ -30,10 +34,6 @@ public class DeleteMessage extends Message {
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) {
-        visitor.processDelete(this, socket );
-    }
-
-    public void setKey(String key) {
-        this.key = key;
+        visitor.processDelete(this, socket);
     }
 }

@@ -15,7 +15,7 @@ public abstract class Message {
         builder.append(data.length).append(END_OF_LINE);
 
         for (Map.Entry<String, String> field : fields.entrySet()) {
-            if(field.getValue() == null) continue;
+            if (field.getValue() == null) continue;
 
             builder.append(field.getKey()).append(": ").append(field.getValue()).append(END_OF_LINE);
         }
@@ -36,6 +36,7 @@ public abstract class Message {
 
         return fields;
     }
+
     public abstract byte[] encode();
 
     public abstract void accept(MessageVisitor visitor, Socket socket) throws IOException;

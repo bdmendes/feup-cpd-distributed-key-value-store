@@ -7,6 +7,7 @@ import java.util.Map;
 
 public class PutReply extends ReplyKeyMessage {
     private String key;
+
     public PutReply(String headers) {
         Map<String, String> fields = decodeFields(headers);
         this.key = fields.get("key");

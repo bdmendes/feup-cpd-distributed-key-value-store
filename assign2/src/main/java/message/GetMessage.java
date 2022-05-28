@@ -3,7 +3,6 @@ package message;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
 public class GetMessage extends Message {
     private String key;
@@ -17,12 +16,12 @@ public class GetMessage extends Message {
 
     }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
-
     public String getKey() {
         return key;
+    }
+
+    public void setKey(String key) {
+        this.key = key;
     }
 
     @Override

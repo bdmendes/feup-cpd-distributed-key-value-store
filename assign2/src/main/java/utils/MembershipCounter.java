@@ -36,8 +36,8 @@ public class MembershipCounter {
         return c;
     }
 
-    private void readFromFile(){
-        if (filePath == null){
+    private void readFromFile() {
+        if (filePath == null) {
             return;
         }
         int c;
@@ -51,8 +51,8 @@ public class MembershipCounter {
         }
     }
 
-    private void writeToFile(){
-        if (filePath == null){
+    private void writeToFile() {
+        if (filePath == null) {
             return;
         }
         try {

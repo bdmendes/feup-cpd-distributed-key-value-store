@@ -12,7 +12,8 @@ public class ElectionMessage extends Message {
     private Map<String, Integer> membershipLog;
     private String origin;
 
-    public ElectionMessage() {}
+    public ElectionMessage() {
+    }
 
     public ElectionMessage(String headers, byte[] data) {
         membershipLog = new HashMap<String, Integer>();
@@ -40,12 +41,12 @@ public class ElectionMessage extends Message {
         return membershipLog;
     }
 
-    public String getOrigin() {
-        return origin;
-    }
-
     public void setMembershipLog(Map<String, Integer> membershipLog) {
         this.membershipLog = membershipLog;
+    }
+
+    public String getOrigin() {
+        return origin;
     }
 
     public void setOrigin(String origin) {

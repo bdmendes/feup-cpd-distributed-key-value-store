@@ -8,7 +8,8 @@ public class PutMessage extends Message {
     private String key;
     private byte[] value;
 
-    public PutMessage() {}
+    public PutMessage() {
+    }
 
     public PutMessage(String headers, byte[] data) {
         Map<String, String> fields = decodeFields(headers);
@@ -16,20 +17,20 @@ public class PutMessage extends Message {
         value = data;
     }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
-
-    public void setValue(byte[] value) {
-        this.value = value;
-    }
-
     public String getKey() {
         return key;
     }
 
+    public void setKey(String key) {
+        this.key = key;
+    }
+
     public byte[] getValue() {
         return value;
+    }
+
+    public void setValue(byte[] value) {
+        this.value = value;
     }
 
     @Override

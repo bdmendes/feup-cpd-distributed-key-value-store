@@ -14,7 +14,7 @@ public class ElectionTask implements Runnable {
 
     @Override
     public void run() {
-        if (!membershipService.isJoined()) {
+        if (!membershipService.getNodeState().joined()) {
             return;
         }
         Node currentNode = membershipService.getStorageService().getNode();

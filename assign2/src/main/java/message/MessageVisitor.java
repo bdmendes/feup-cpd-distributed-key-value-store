@@ -40,9 +40,10 @@ public interface MessageVisitor {
 
     default void processElection(ElectionMessage electionMessage, Socket socket) {
 
-    };
+    }
 
     default void processLeader(LeaderMessage leaderMessage, Socket socket) {
 
-    };
+    }
+
 }

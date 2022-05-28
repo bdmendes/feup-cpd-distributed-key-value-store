@@ -17,7 +17,7 @@ public class HeaderReaderState extends MessageReaderState {
         }
 
         addLine(line);
-        if(line.equals("")) {
+        if (line.equals("")) {
             context.setState(new BodyReaderState(context));
         }
     }

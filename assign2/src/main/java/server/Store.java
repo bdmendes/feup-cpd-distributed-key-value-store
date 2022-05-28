@@ -1,24 +1,15 @@
 package server;
 
 import communication.IPAddress;
-import message.Message;
-import message.MessageFactory;
-import message.messagereader.MessageReader;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
-import java.net.Socket;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class Store {
     public static void bindRmiMethods(MembershipService membershipService) {
@@ -71,32 +62,23 @@ public class Store {
 
         Node node = new Node(nodeId, storePort);
         StorageService storageService = new StorageService(node);
-        MembershipService membershipService = new MembershipService(storageService,
-                new IPAddress(ipMulticast, Integer.parseInt(ipMulticastPort)));
-        Store.bindRmiMethods(membershipService);
+        try {
+            ServerSocket receiveSocket = new ServerSocket();
+            receiveSocket.bind(new InetSocketAddress(nodeId, storePort));
 
-        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
+            MembershipService membershipService = new MembershipService(
+                    storageService,
+                    new IPAddress(ipMulticast, Integer.parseInt(ipMulticastPort)),
+                    receiveSocket
+            );
 
-        try (ServerSocket serverSocket = new ServerSocket()) {
-            serverSocket.bind(new InetSocketAddress(nodeId, storePort));
             System.out.println("Store server is running on " + nodeId + ":" + storePort);
             System.out.println("Current node membership counter: " + membershipService.getMembershipCounter().get());
 
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Got connection from client");
-                BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-
-                MessageReader messageReader = new MessageReader();
-
-                while (!messageReader.isComplete()) {
-                    messageReader.read(in);
-                }
-
-                Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-                MessageProcessor processor = new MessageProcessor(membershipService, message, clientSocket);
-                executorService.execute(processor);
-            }
+            Store.bindRmiMethods(membershipService);
+        } catch (IOException e) {
+            System.out.println("Failed to create server socket");
+            e.printStackTrace();
         }
     }
 }
