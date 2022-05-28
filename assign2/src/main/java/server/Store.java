@@ -40,7 +40,6 @@ public class Store {
                 try {
                     registry.unbind("reg" + membershipService.getStorageService().getNode().id());
                 } catch (RemoteException | NotBoundException e) {
-                    System.err.println("Could not shutdown executor service");
                     e.printStackTrace();
                 }
             }));
@@ -76,21 +75,12 @@ public class Store {
                 new IPAddress(ipMulticast, Integer.parseInt(ipMulticastPort)));
         Store.bindRmiMethods(membershipService);
 
-        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
 
         try (ServerSocket serverSocket = new ServerSocket()) {
             serverSocket.bind(new InetSocketAddress(nodeId, storePort));
             System.out.println("Store server is running on " + nodeId + ":" + storePort);
             System.out.println("Current node membership counter: " + membershipService.getMembershipCounter().get());
-
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    executorService.shutdown();
-                    executorService.awaitTermination(5, TimeUnit.SECONDS);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            }));
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();

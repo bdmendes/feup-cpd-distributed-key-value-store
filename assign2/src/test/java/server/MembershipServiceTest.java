@@ -40,20 +40,20 @@ public class MembershipServiceTest {
         MembershipService service3;
 
         StorageService storageService = new StorageService(new Node("-1", -1));
-        service = new MembershipService(storageService, null);
+        service = new MembershipService(storageService);
 
         service.getMembershipCounter().incrementAndGet();
         service.getMembershipCounter().incrementAndGet();
 
         assertEquals(1, service.getNodeMembershipCounter());
 
-        service2 = new MembershipService(storageService, null);
+        service2 = new MembershipService(storageService);
 
         assertEquals(1, service2.getNodeMembershipCounter());
 
         service2.getMembershipCounter().incrementAndGet();
 
-        service3 = new MembershipService(storageService, null);
+        service3 = new MembershipService(storageService);
         assertEquals(2, service3.getNodeMembershipCounter());
     }
 

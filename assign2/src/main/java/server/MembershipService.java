@@ -7,6 +7,8 @@ import communication.MulticastHandler;
 import message.JoinMessage;
 import message.Message;
 import message.PutMessage;
+import server.state.InitNodeState;
+import server.state.NodeState;
 import server.tasks.ElectionTask;
 import server.tasks.MembershipTask;
 import utils.*;
@@ -31,6 +33,16 @@ public class MembershipService implements MembershipRMI {
     private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
     private final AtomicBoolean isLeader = new AtomicBoolean(false);
+    private NodeState nodeState;
+    public final Object joinLeaveLock = new Object();
+
+    protected MembershipService(StorageService storageService) {
+        this.storageService = storageService;
+        this.ipMulticastGroup = null;
+        this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
+        this.membershipLog = new MembershipLog(getMembershipLogFilePath());
+        this.clusterMap = new ClusterMap(getClusterMapFilePath());
+    }
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
@@ -38,10 +50,9 @@ public class MembershipService implements MembershipRMI {
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
         this.membershipLog = new MembershipLog(getMembershipLogFilePath());
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
+        this.nodeState = new InitNodeState(this);
 
-        if (ipMulticastGroup != null && isJoined()) {
-            clusterMap.clear();
-            membershipLog.clear();
+        if (isJoined()) {
             nodeMembershipCounter.incrementAndGet();
             join();
         }
@@ -73,6 +84,10 @@ public class MembershipService implements MembershipRMI {
         return multicastHandler;
     }
 
+    public void initMulticastHandler() throws IOException {
+        this.multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
+    }
+
     public SentMemberships getSentMemberships() {
         return sentMemberships;
     }
@@ -88,7 +103,7 @@ public class MembershipService implements MembershipRMI {
         return membershipLog;
     }
 
-    private JoinMessage createJoinMessage(int port) {
+    public JoinMessage createJoinMessage(int port) {
         JoinMessage joinMessage = new JoinMessage();
         joinMessage.setCounter(nodeMembershipCounter.get());
         joinMessage.setNodeId(storageService.getNode().id());
@@ -97,48 +112,9 @@ public class MembershipService implements MembershipRMI {
         return joinMessage;
     }
 
-    private void multicastJoinLeave(int port) throws IOException {
-        JoinMessage message = createJoinMessage(port);
-        multicastHandler.sendMessage(message);
-    }
-
     @Override
     public boolean join() throws IOException {
-        if (isJoined()) {
-            return false;
-        }
-
-        multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
-        ServerSocket serverSocket = new ServerSocket();
-        serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
-
-        int counter = nodeMembershipCounter.incrementAndGet();
-
-        JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
-        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler, 2000);
-        Thread messageReceiverThread = new Thread(messageReceiver);
-        messageReceiverThread.start();
-
-        try {
-            this.multicastJoinLeave(serverSocket.getLocalPort());
-        } catch (IOException e) {
-            e.printStackTrace();
-            multicastHandler.close();
-            messageReceiver.close();
-            return false;
-        }
-
-        clusterMap.put(storageService.getNode());
-        membershipLog.put(storageService.getNode().id(), counter);
-
-        System.out.println("Joined cluster");
-        System.out.println(this.getClusterMap().getNodes());
-        System.out.println(this.getMembershipLog(32));
-
-        Thread multicastHandlerThread = new Thread(multicastHandler);
-        multicastHandlerThread.start();
-
-        return true;
+        return nodeState.join();
     }
 
     private void transferAllMyKeysToMySuccessor() {
@@ -171,7 +147,8 @@ public class MembershipService implements MembershipRMI {
 
         try {
             nodeMembershipCounter.incrementAndGet();
-            this.multicastJoinLeave(-1);
+            JoinMessage message = createJoinMessage(-1);
+            this.multicastHandler.sendMessage(message);
         } catch (IOException e) {
             e.printStackTrace();
             return false;

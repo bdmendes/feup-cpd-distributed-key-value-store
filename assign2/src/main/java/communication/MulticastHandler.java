@@ -52,7 +52,7 @@ public class MulticastHandler implements Runnable {
 
     @Override
     public void run() {
-        ExecutorService executorService = Executors.newFixedThreadPool(4);
+        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
 
         while(running) {
             byte[] buffer = new byte[MAX_BUF_LEN];

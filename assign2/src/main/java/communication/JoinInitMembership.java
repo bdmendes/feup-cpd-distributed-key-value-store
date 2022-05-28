@@ -24,10 +24,10 @@ public class JoinInitMembership implements Runnable {
     private final Message retransmitMessage;
     private boolean running;
 
-    public JoinInitMembership(MembershipService service, ServerSocket socket, Message retransmit, MulticastHandler handler, int blockMiliseconds){
+    public JoinInitMembership(MembershipService service, ServerSocket socket, Message retransmit, int blockMiliseconds){
         this.membershipService = service;
         this.blockMiliseconds = blockMiliseconds;
-        this.multicastHandler = handler; // what if handler is closed while this is running?
+        this.multicastHandler = service.getMulticastHandler();
         this.serverSocket = socket;
         this.retransmitMessage = retransmit;
         this.running = true;
