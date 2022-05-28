@@ -34,8 +34,9 @@ public class InitNodeState extends NodeState {
     public boolean join() {
         synchronized (this.membershipService.joinLeaveLock) {
             if (this.membershipService.isJoined()) {
-                return true;
+                return true; // TODO: check if truly joined or just in progress and return
             }
+            this.membershipService.setNodeState(new JoiningNodeState(this.membershipService));
 
             ServerSocket serverSocket;
             try {
@@ -44,7 +45,8 @@ public class InitNodeState extends NodeState {
                 serverSocket.bind(new InetSocketAddress(storageService.getNode().id(), 0));
             } catch (IOException e) {
                 System.out.println("Failed to create server socket");
-                return false;
+                this.membershipService.setNodeState(this);
+                return false; // TODO: return ERROR
             }
 
             int counter = this.membershipService.getMembershipCounter().incrementAndGet();
@@ -63,6 +65,7 @@ public class InitNodeState extends NodeState {
                 this.membershipService.getMulticastHandler().sendMessage(joinMessage);
             } catch (IOException e) {
                 System.out.println("Failed to send join message");
+                this.membershipService.setNodeState(this);
                 try {
                     this.membershipService.getMulticastHandler().close();
                 } catch (IOException e1) {
@@ -86,6 +89,7 @@ public class InitNodeState extends NodeState {
             try {
                 joinInitThread.join();
             } catch (InterruptedException e) {
+                this.membershipService.setNodeState(this);
                 return false;
             }
 

@@ -72,6 +72,11 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
+    public void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
+        CommonState.processPutRelay(putRelayMessage, socket, this.membershipService);
+    }
+
+    @Override
     public void processDelete(DeleteMessage deleteMessage, Socket clientSocket) {
         Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(deleteMessage.getKey());
         if (responsibleNode == null) {

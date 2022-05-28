@@ -5,7 +5,7 @@ import communication.IPAddress;
 import communication.MulticastHandler;
 import message.JoinMessage;
 import message.Message;
-import message.PutMessage;
+import message.PutRelayMessage;
 import server.state.InitNodeState;
 import server.state.NodeState;
 import server.tasks.ElectionTask;
@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -184,7 +183,7 @@ public class MembershipService implements MembershipRMI {
             if (hash.compareTo(joiningNodeHash) >= 0 && hash.compareTo(thisNodeHash) <= 0) {
                 continue;
             }
-            PutMessage putMessage = new PutMessage();
+            PutRelayMessage putMessage = new PutRelayMessage();
             try {
                 File file = new File(this.getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
@@ -207,7 +206,7 @@ public class MembershipService implements MembershipRMI {
         }
 
         for (String hash : getStorageService().getHashes()) {
-            PutMessage putMessage = new PutMessage();
+            PutRelayMessage putMessage = new PutRelayMessage();
             try {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
@@ -218,8 +217,6 @@ public class MembershipService implements MembershipRMI {
                 throw new IllegalArgumentException("File not found");
             }
             CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
-            System.out.println(Arrays.toString(putMessage.encode()));
-            System.out.println(successorNode.id());
             this.getStorageService().delete(hash);
         }
     }

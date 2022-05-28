@@ -11,6 +11,7 @@ public class MessageFactory {
 
         return switch (type) {
             case PUT -> new PutMessage(headers, body);
+            case PUT_RELAY -> new PutRelayMessage(headers, body);
             case PUT_REPLY -> new PutReply(headers);
             case GET -> new GetMessage(headers);
             case GET_REPLY -> new GetReply(headers, body);

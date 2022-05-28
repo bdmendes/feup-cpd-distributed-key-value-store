@@ -8,6 +8,10 @@ public interface MessageVisitor {
 
     }
 
+    default void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
+
+    }
+
     default void processGet(GetMessage getMessage, Socket socket) {
 
     }
