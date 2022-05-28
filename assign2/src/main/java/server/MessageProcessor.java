@@ -11,6 +11,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -165,9 +166,47 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             }
             System.out.println("Putting hash " + putMessage.getKey());
             CommunicationUtils.sendMessage(response, clientSocket);
+
+            List<Node> replicationNodes = this.membershipService.getClusterMap().getReplicationNodes(responsibleNode, 3);
+            System.out.println(replicationNodes);
+            for (Node node: replicationNodes) {
+                System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to node " + node);
+                PutRelayMessage putRelayMessage = new PutRelayMessage();
+                putRelayMessage.setKey(putMessage.getKey());
+                putRelayMessage.setValue(putMessage.getValue());
+                putRelayMessage.setTarget(node.id());
+
+                CommunicationUtils.dispatchMessageToNodeWithoutReply(node, putRelayMessage);
+            }
         } else {
             System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
             CommunicationUtils.dispatchMessageToNode(responsibleNode, message, clientSocket);
+        }
+    }
+
+
+    @Override
+    public void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
+        if (!membershipService.isJoined()) {
+            this.sendErrorResponse(new PutReply(), StatusCode.NODE_NOT_JOINED, putRelayMessage.getKey(), clientSocket);
+            return;
+        }
+
+        Node responsibleNode = this.membershipService.getClusterMap().getNodeFromHash(putRelayMessage.getTarget());
+
+        System.out.println("Received put relay message: " + responsibleNode + " " + putRelayMessage.getTarget());
+
+        if (responsibleNode == null) {
+            this.sendErrorResponse(new PutReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, putRelayMessage.getKey(), clientSocket);
+            return;
+        }
+
+        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
+            try {
+                membershipService.getStorageService().put(putRelayMessage.getKey(), putRelayMessage.getValue());
+            } catch (IOException ignored) {
+            }
+            System.out.println("Putting replicated hash " + putRelayMessage.getKey() + " in node " + putRelayMessage.getTarget());
         }
     }
 
@@ -324,6 +363,11 @@ public class MessageProcessor implements Runnable, MessageVisitor {
 
         membershipService.setLeader(false);
         this.membershipService.sendToNextAvailableNode(leaderMessage);
+    }
+
+    @Override
+    public void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {
+        CommunicationUtils.sendMessage(putRelayReply, socket);
     }
 
 }

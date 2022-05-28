@@ -20,6 +20,8 @@ public class MessageFactory {
             case MEMBERSHIP -> new MembershipMessage(headers, body);
             case ELECTION -> new ElectionMessage(headers, body);
             case LEADER -> new LeaderMessage(headers);
+            case PUT_RELAY -> new PutRelayMessage(headers, body);
+            case PUT_RELAY_REPLY -> new PutRelayReply(headers);
         };
     }
 }

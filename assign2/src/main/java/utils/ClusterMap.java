@@ -42,6 +42,10 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(id.getBytes(StandardCharsets.UTF_8)));
     }
 
+    public Node getNodeFromHash(String hash) {
+        return clusterNodes.get(hash);
+    }
+
     public void clear() {
         clusterNodes.clear();
         this.writeToFile();
@@ -111,4 +115,20 @@ public class ClusterMap {
             e.printStackTrace();
         }
     }
+
+    public List<Node> getReplicationNodes(Node firstNode, int replicationFactor) {
+        List<Node> nodes = new ArrayList<>();
+
+        Node currentNode = this.getNodeSuccessor(firstNode);
+
+        while (replicationFactor > 1 && !currentNode.equals(firstNode)) {
+            nodes.add(currentNode);
+            currentNode = this.getNodeSuccessor(currentNode);
+
+            replicationFactor--;
+        }
+
+        return nodes;
+    }
+
 }
