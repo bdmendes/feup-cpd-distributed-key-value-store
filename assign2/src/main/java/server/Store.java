@@ -5,8 +5,12 @@ import message.Message;
 import message.MessageFactory;
 import message.messagereader.MessageReader;
 
-import java.io.*;
-import java.net.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -17,10 +21,17 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 public class Store {
-    public static void bindRmiMethods(MembershipService membershipService){
+    public static void bindRmiMethods(MembershipService membershipService) {
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
-            Registry registry = LocateRegistry.getRegistry();
+            Registry registryTemp;
+            try {
+                registryTemp = LocateRegistry.createRegistry(1099);
+            } catch (RemoteException e) {
+                registryTemp = LocateRegistry.getRegistry();
+            }
+            final Registry registry = registryTemp;
+
             String registryName = "reg" + membershipService.getStorageService().getNode().id();
             registry.rebind(registryName, stub);
             System.err.println("Server ready for RMI operations on registry: " + registryName);
@@ -28,7 +39,7 @@ public class Store {
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {
                     registry.unbind("reg" + membershipService.getStorageService().getNode().id());
-                } catch ( RemoteException | NotBoundException e) {
+                } catch (RemoteException | NotBoundException e) {
                     System.err.println("Could not shutdown executor service");
                     e.printStackTrace();
                 }
@@ -70,6 +81,7 @@ public class Store {
         try (ServerSocket serverSocket = new ServerSocket()) {
             serverSocket.bind(new InetSocketAddress(nodeId, storePort));
             System.out.println("Store server is running on " + nodeId + ":" + storePort);
+            System.out.println("Current node membership counter: " + membershipService.getMembershipCounter().get());
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 try {

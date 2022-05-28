@@ -66,4 +66,10 @@ public class ClientMessageVisitor implements MessageVisitor {
         System.out.println(message.getClass());
         message.accept(this, socket);
     }
+
+    @Override
+    public void processElection(ElectionMessage electionMessage, Socket socket) {}
+
+    @Override
+    public void processLeader(LeaderMessage leaderMessage, Socket socket) {}
 }

@@ -1,18 +1,19 @@
 package server;
 
+import communication.CommunicationUtils;
 import message.*;
-import message.messagereader.MessageReader;
+import utils.MembershipLog;
 import utils.StoreUtils;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.util.Random;
-import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
 
 public class MessageProcessor implements Runnable, MessageVisitor {
     private final MembershipService membershipService;
@@ -34,42 +35,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
     }
 
-    private static void sendMessage(Message message, Socket socket) {
-        try {
-            DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
-            dataOutputStream.write(message.encode());
-            dataOutputStream.flush();
-        } catch (IOException e) {
-            throw new RuntimeException("Could not send message");
-        }
-    }
-
-    private static Message readMessage(Socket socket) {
-        try {
-            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            MessageReader messageReader = new MessageReader();
-            while (!messageReader.isComplete()) {
-                messageReader.read(bufferedReader);
-            }
-            return MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
-        } catch (IOException e) {
-            throw new RuntimeException("Could not read message");
-        }
-    }
-
-    public static void dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
-        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
-            sendMessage(message, responsibleNodeSocket);
-            Message replyMessage = readMessage(responsibleNodeSocket);
-            if (clientSocket != null) {
-                System.out.println("Sending dispatched request back to the client");
-                sendMessage(replyMessage, clientSocket);
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Could not request operation to responsible node");
-        }
-    }
-
     public void processJoinMessage(JoinMessage joinMessage) {
         if (this.membershipService.getSentMemberships().hasSentMembership(
                 joinMessage.getNodeId(),
@@ -81,16 +46,12 @@ public class MessageProcessor implements Runnable, MessageVisitor {
         }
 
         Node newNode = new Node(joinMessage.getNodeId(), joinMessage.getPort());
-
         this.membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
         this.membershipService.getClusterMap().put(newNode);
 
-        System.out.println(this.membershipService.getClusterMap().getNodes());
-        System.out.println(this.membershipService.getMembershipLog(32));
-
         try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
             Thread.sleep(new Random().nextInt(1200));
-            if(this.membershipService.getSentMemberships().hasSentMembership(
+            if (this.membershipService.getSentMemberships().hasSentMembership(
                     joinMessage.getNodeId(),
                     joinMessage.getCounter(),
                     this.membershipService.getMembershipLog().totalCounter()
@@ -100,21 +61,20 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             }
 
             MembershipMessage membershipMessage = new MembershipMessage();
-
             membershipMessage.setMembershipLog(membershipService.getMembershipLog(32));
             membershipMessage.setNodes(membershipService.getClusterMap().getNodes());
             membershipMessage.setNodeId(membershipService.getStorageService().getNode().id());
-            sendMessage(membershipMessage, otherNode);
+            CommunicationUtils.sendMessage(membershipMessage, otherNode);
             this.membershipService.getSentMemberships().saveSentMembership(
                     joinMessage.getNodeId(),
                     joinMessage.getCounter(),
                     this.membershipService.getMembershipLog().totalCounter()
             );
+
             System.out.println("sent membership message to " + joinMessage.getNodeId());
 
-
             if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
-                    .equals(membershipService.getStorageService().getNode())){
+                    .equals(membershipService.getStorageService().getNode())) {
                 this.transferKeysToJoiningNode(newNode);
             }
         } catch (IOException | InterruptedException e) {
@@ -148,7 +108,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     private void sendErrorResponse(ReplyKeyMessage response, StatusCode statusCode, String requestedKey, Socket clientSocket) {
         response.setKey(requestedKey);
         response.setStatusCode(statusCode);
-        sendMessage(response, clientSocket);
+        CommunicationUtils.sendMessage(response, clientSocket);
     }
 
     public void processGet(GetMessage getMessage, Socket clientSocket) {
@@ -174,10 +134,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 response.setStatusCode(StatusCode.FILE_NOT_FOUND);
             }
             System.out.println("Getting hash " + getMessage.getKey());
-            sendMessage(response, clientSocket);
+            CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            dispatchMessageToNode(responsibleNode, message, clientSocket);
+            CommunicationUtils.dispatchMessageToNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -204,10 +164,10 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 response.setStatusCode(StatusCode.ERROR);
             }
             System.out.println("Putting hash " + putMessage.getKey());
-            sendMessage(response, clientSocket);
+            CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            dispatchMessageToNode(responsibleNode, message, clientSocket);
+            CommunicationUtils.dispatchMessageToNode(responsibleNode, message, clientSocket);
         }
     }
 
@@ -230,18 +190,21 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             response.setKey(deleteMessage.getKey());
             response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
             System.out.println("Deleting hash " + deleteMessage.getKey());
-            sendMessage(response, clientSocket);
+            CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to node " + responsibleNode);
-            dispatchMessageToNode(responsibleNode, message, clientSocket);
+            CommunicationUtils.dispatchMessageToNode(responsibleNode, message, clientSocket);
         }
     }
 
     @Override
     public void processMembership(MembershipMessage membershipMessage, Socket dummy) {
-        System.out.println("Received membership message");
-        Map<String, Integer> recentLogs = this.membershipService.getMembershipLog(32);
+        if (membershipMessage.getNodeId().equals(this.membershipService.getStorageService().getNode().id())) {
+            System.out.println("Received membership message from myself");
+            return;
+        }
 
+        Map<String, Integer> recentLogs = this.membershipService.getMembershipLog(32);
         for (Node node : membershipMessage.getNodes()) {
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
@@ -267,46 +230,100 @@ public class MessageProcessor implements Runnable, MessageVisitor {
                 }
             }
         }
+
+        System.out.println("Received membership message " + membershipService.getMembershipLog().getMap().entrySet());
     }
 
     private void transferKeysToJoiningNode(Node joiningNode) {
         String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
+        String thisNodeHash = StoreUtils.sha256(membershipService.getStorageService()
+                .getNode().id().getBytes(StandardCharsets.UTF_8));
         for (String hash : membershipService.getStorageService().getHashes()) {
-            if (joiningNodeHash.compareTo(hash) > 0) {
-                PutMessage putMessage = new PutMessage();
-                try {
-                    File file = new File(membershipService.getStorageService().getValueFilePath(hash));
-                    byte[] bytes = Files.readAllBytes(file.toPath());
-                    String key = StoreUtils.sha256(bytes);
-                    putMessage.setKey(key);
-                    putMessage.setValue(bytes);
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("File not found");
-                }
-                dispatchMessageToNode(joiningNode, putMessage, null);
-                this.membershipService.getStorageService().delete(hash);
+            if (hash.compareTo(joiningNodeHash) >= 0 && hash.compareTo(thisNodeHash) <= 0) {
+                continue;
             }
+            PutMessage putMessage = new PutMessage();
+            try {
+                File file = new File(membershipService.getStorageService().getValueFilePath(hash));
+                byte[] bytes = Files.readAllBytes(file.toPath());
+                String key = StoreUtils.sha256(bytes);
+                putMessage.setKey(key);
+                putMessage.setValue(bytes);
+            } catch (IOException e) {
+                throw new IllegalArgumentException("File not found");
+            }
+            CommunicationUtils.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
+            this.membershipService.getStorageService().delete(hash);
         }
     }
 
     @Override
     public void processGetReply(GetReply getReply, Socket socket) {
-        sendMessage(getReply, socket);
+        CommunicationUtils.sendMessage(getReply, socket);
     }
 
     @Override
     public void processPutReply(PutReply putReply, Socket socket) {
-        sendMessage(putReply, socket);
+        CommunicationUtils.sendMessage(putReply, socket);
     }
 
     @Override
     public void processDeleteReply(DeleteReply deleteReply, Socket socket) {
-        sendMessage(deleteReply, socket);
+        CommunicationUtils.sendMessage(deleteReply, socket);
     }
 
     @Override
     public void process(Message message, Socket socket) throws IOException {
         message.accept(this, socket);
+    }
+
+    @Override
+    public void processElection(ElectionMessage electionMessage, Socket socket) {
+        Map<String, Integer> incomingMembershipLog = electionMessage.getMembershipLog();
+        String origin = electionMessage.getOrigin();
+
+        Node currentNode = membershipService.getStorageService().getNode();
+        Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
+        System.out.println("Received election message from: " + origin + "; dispatching to next node: " + nextNode);
+        if (origin.equals(currentNode.id())) {
+            membershipService.setLeader(true);
+            LeaderMessage message = new LeaderMessage();
+            message.setLeaderNode(origin);
+            this.membershipService.sendToNextAvailableNode(message);
+            return;
+        }
+
+        MembershipLog membershipLog = membershipService.getMembershipLog();
+
+        Integer membershipDifference = incomingMembershipLog.entrySet()
+                .parallelStream()
+                .reduce(0, (Integer subtotal, Map.Entry<String, Integer> element) -> {
+                    Integer current = membershipLog.get(element.getKey());
+
+                    if (current == null) {
+                        return subtotal - element.getValue();
+                    }
+
+                    return subtotal + current - element.getValue();
+                }, Integer::sum);
+
+        if (membershipDifference <= 0 && currentNode.id().compareTo(origin) <= 0) {
+            return;
+        }
+
+        this.membershipService.sendToNextAvailableNode(electionMessage);
+    }
+
+    @Override
+    public void processLeader(LeaderMessage leaderMessage, Socket socket) {
+        if (leaderMessage.getLeaderNode().equals(membershipService.getStorageService().getNode().id())) {
+            System.out.println(membershipService.getStorageService().getNode().id() + " is leader.");
+            return;
+        }
+        System.out.println(membershipService.getStorageService().getNode().id() + " is not leader.");
+
+        membershipService.setLeader(false);
+        this.membershipService.sendToNextAvailableNode(leaderMessage);
     }
 
 }

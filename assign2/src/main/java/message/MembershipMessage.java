@@ -9,10 +9,9 @@ import java.util.*;
 public class MembershipMessage extends Message {
     private Set<Node> nodes;
     private Map<String, Integer> membershipLog;
-    private String nodeId;
+    private String nodeId = "";
 
     public MembershipMessage() {
-
     }
 
     public MembershipMessage(String headers, byte[] data) {
@@ -23,10 +22,12 @@ public class MembershipMessage extends Message {
         nodeId = fields.get("nodeId");
         List<String> nodesRaw = List.of(nodeString.split(","));
 
-        nodesRaw.forEach(n -> {
-            String[] parts = n.split("/");
-            nodes.add(new Node(parts[0], Integer.parseInt(parts[1])));
-        });
+        if (nodesRaw.size() > 1) {
+            nodesRaw.forEach(n -> {
+                String[] parts = n.split("/");
+                nodes.add(new Node(parts[0], Integer.parseInt(parts[1])));
+            });
+        }
         MembershipLog.readMembershipLogFromData(membershipLog, data);
     }
 
@@ -42,7 +43,7 @@ public class MembershipMessage extends Message {
         return nodes;
     }
 
-    public void addNode(Node node){
+    public void addNode(Node node) {
         this.nodes.add(node);
     }
 

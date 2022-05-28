@@ -14,7 +14,7 @@ public class RMIAddress extends Address {
     public RMIAddress(String address) {
         Matcher matcher = getMatcher(address);
 
-        if(matcher.find()) {
+        if (matcher.find()) {
             this.objectName = matcher.group(2);
             this.ip = matcher.group(1);
         } else {
@@ -30,4 +30,3 @@ public class RMIAddress extends Address {
         return objectName;
     }
 }
-

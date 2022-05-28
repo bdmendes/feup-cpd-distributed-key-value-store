@@ -103,5 +103,10 @@ public class JoinInitMembership implements Runnable {
         System.out.println("Received " + received + " messages");
         System.out.println(this.membershipService.getClusterMap().getNodes());
         System.out.println(this.membershipService.getMembershipLog(32));
+        try {
+            this.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

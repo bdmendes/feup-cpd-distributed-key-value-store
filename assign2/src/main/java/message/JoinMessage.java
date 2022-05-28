@@ -10,7 +10,8 @@ public class JoinMessage extends Message {
     private int connectionPort;
     private int port;
 
-    public JoinMessage() {}
+    public JoinMessage() {
+    }
 
     public JoinMessage(String header) {
         Map<String, String> fields = decodeFields(header);

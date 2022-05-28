@@ -8,5 +8,5 @@ public enum MessageType {
     DELETE,
     DELETE_REPLY,
     JOIN,
-    MEMBERSHIP,
+    MEMBERSHIP, ELECTION, LEADER,
 }

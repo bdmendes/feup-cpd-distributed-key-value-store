@@ -44,6 +44,7 @@ public class ClusterMap {
 
     public void clear() {
         clusterNodes.clear();
+        this.writeToFile();
     }
 
     public Node getNodeSuccessor(Node node) {
@@ -56,22 +57,24 @@ public class ClusterMap {
         return this.getNodeSuccessor(nodeHash);
     }
 
-    public Node getNodeResponsibleForHash(String hash){
+    public Node getNodeResponsibleForHash(String hash) {
         return this.getNodeSuccessor(hash);
     }
 
     private Node getNodeSuccessor(String hash) {
-        if (clusterNodes.isEmpty()){
+        if (clusterNodes.isEmpty()) {
             return null;
         }
-        for (Map.Entry<String,Node> entry : clusterNodes.entrySet()) {
+
+        for (Map.Entry<String, Node> entry : clusterNodes.entrySet()) {
             String currentNodeHash = entry.getKey();
             Node currentNode = entry.getValue();
-            if (currentNodeHash.compareTo(hash) > 0){
+            if (currentNodeHash.compareTo(hash) > 0) {
                 return currentNode;
             }
         }
-        return clusterNodes.entrySet().iterator().next().getValue();
+
+        return clusterNodes.values().iterator().next();
     }
 
     private void readFromFile() {
@@ -88,7 +91,7 @@ public class ClusterMap {
             String[] line = scanner.nextLine().split(" ");
             String nodeId = line[0];
             int port = Integer.parseInt(line[1]);
-            clusterNodes.put(nodeId, new Node(nodeId, port));
+            this.put(new Node(nodeId, port));
         }
         scanner.close();
     }

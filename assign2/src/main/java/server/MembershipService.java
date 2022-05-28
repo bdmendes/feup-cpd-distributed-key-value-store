@@ -1,16 +1,26 @@
 package server;
 
+import communication.CommunicationUtils;
 import communication.IPAddress;
 import communication.JoinInitMembership;
 import communication.MulticastHandler;
-import message.*;
+import message.JoinMessage;
+import message.Message;
+import message.PutMessage;
+import server.tasks.ElectionTask;
+import server.tasks.MembershipTask;
 import utils.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MembershipService implements MembershipRMI {
     private final StorageService storageService;
@@ -20,6 +30,7 @@ public class MembershipService implements MembershipRMI {
     private final IPAddress ipMulticastGroup;
     private final SentMemberships sentMemberships = new SentMemberships();
     private MulticastHandler multicastHandler;
+    private final AtomicBoolean isLeader = new AtomicBoolean(false);
 
     public MembershipService(StorageService storageService, IPAddress ipMulticastGroup) throws IOException {
         this.storageService = storageService;
@@ -29,10 +40,17 @@ public class MembershipService implements MembershipRMI {
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
 
         if (ipMulticastGroup != null && isJoined()) {
-            multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
-            Thread multicastHandlerThread = new Thread(multicastHandler);
-            multicastHandlerThread.start();
+            clusterMap.clear();
+            membershipLog.clear();
+            nodeMembershipCounter.incrementAndGet();
+            join();
         }
+
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        ElectionTask electionTask = new ElectionTask(this);
+        scheduler.scheduleAtFixedRate(electionTask, 0, 10, TimeUnit.SECONDS);
+        MembershipTask membershipTask = new MembershipTask(this);
+        scheduler.scheduleAtFixedRate(membershipTask, 0, 1, TimeUnit.SECONDS);
     }
 
     public boolean isJoined() {
@@ -51,8 +69,8 @@ public class MembershipService implements MembershipRMI {
         return nodeMembershipCounter;
     }
 
-    public IPAddress getIpMulticastGroup() {
-        return ipMulticastGroup;
+    public MulticastHandler getMulticastHandler() {
+        return multicastHandler;
     }
 
     public SentMemberships getSentMemberships() {
@@ -61,11 +79,6 @@ public class MembershipService implements MembershipRMI {
 
     public Map<String, Integer> getMembershipLog(int numberOfLogs) {
         return membershipLog.getMostRecentLogs(numberOfLogs);
-    }
-
-
-    public Map<String, Integer> cloneLog() {
-        return new LinkedHashMap<>(membershipLog.getMap());
     }
 
     /**
@@ -102,7 +115,7 @@ public class MembershipService implements MembershipRMI {
         int counter = nodeMembershipCounter.incrementAndGet();
 
         JoinMessage message = createJoinMessage(serverSocket.getLocalPort());
-        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler,2000);
+        JoinInitMembership messageReceiver = new JoinInitMembership(this, serverSocket, message, multicastHandler, 2000);
         Thread messageReceiverThread = new Thread(messageReceiver);
         messageReceiverThread.start();
 
@@ -118,6 +131,7 @@ public class MembershipService implements MembershipRMI {
         clusterMap.put(storageService.getNode());
         membershipLog.put(storageService.getNode().id(), counter);
 
+        System.out.println("Joined cluster");
         System.out.println(this.getClusterMap().getNodes());
         System.out.println(this.getMembershipLog(32));
 
@@ -129,7 +143,7 @@ public class MembershipService implements MembershipRMI {
 
     private void transferAllMyKeysToMySuccessor() {
         Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
-        if (successorNode.equals(this.storageService.getNode())){
+        if (successorNode.equals(this.storageService.getNode())) {
             return;
         }
 
@@ -144,7 +158,7 @@ public class MembershipService implements MembershipRMI {
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            MessageProcessor.dispatchMessageToNode(successorNode, putMessage, null);
+            CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
             this.getStorageService().delete(hash);
         }
     }
@@ -170,6 +184,8 @@ public class MembershipService implements MembershipRMI {
         clusterMap.clear();
         membershipLog.clear();
 
+        System.out.println("Left cluster");
+
         return true;
     }
 
@@ -188,4 +204,29 @@ public class MembershipService implements MembershipRMI {
     private String getClusterMapFilePath() {
         return "./node_storage/storage" + storageService.getNode() + "/cluster_map.txt";
     }
+
+    public void setLeader(boolean isLeader) {
+        this.isLeader.set(isLeader);
+    }
+
+    public boolean isLeader() {
+        return this.isLeader.get();
+    }
+
+    public void sendToNextAvailableNode(Message message) {
+        Node currentNode = getStorageService().getNode();
+        Node nextNode;
+        boolean notSent = true;
+
+        while (notSent) {
+            nextNode = getClusterMap().getNodeSuccessor(currentNode);
+            try {
+                CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
+                notSent = false;
+            } catch (RuntimeException e) {
+                currentNode = nextNode;
+            }
+        }
+    }
+
 }

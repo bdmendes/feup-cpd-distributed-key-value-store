@@ -37,4 +37,8 @@ public interface MessageVisitor {
     }
 
     void process(Message message, Socket socket) throws IOException;
+
+    void processElection(ElectionMessage electionMessage, Socket socket);
+
+    void processLeader(LeaderMessage leaderMessage, Socket socket);
 }
