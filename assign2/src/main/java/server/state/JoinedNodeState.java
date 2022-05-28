@@ -244,9 +244,13 @@ public class JoinedNodeState extends NodeState {
     @Override
     public boolean leave() {
         synchronized (this.membershipService.joinLeaveLock) {
+            if(!this.membershipService.isJoined()) {
+                return true;
+            }
+
             this.membershipService.setNodeState(new InitNodeState(this.membershipService));
 
-            // wait for all threads to finish
+            this.membershipService.getMessageReceiverTask().waitAndRestart();
 
             try {
                 this.membershipService.getMembershipCounter().incrementAndGet();

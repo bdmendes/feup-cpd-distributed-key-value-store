@@ -22,7 +22,7 @@ public class InitNodeState extends NodeState {
 
     @Override
     public void processGet(GetMessage getMessage, Socket socket) {
-        CommunicationUtils.sendErrorResponse(new PutReply(), StatusCode.NODE_NOT_JOINED, getMessage.getKey(), socket);
+        CommunicationUtils.sendErrorResponse(new GetReply(), StatusCode.NODE_NOT_JOINED, getMessage.getKey(), socket);
     }
 
     @Override

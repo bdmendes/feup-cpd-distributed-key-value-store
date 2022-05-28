@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 public class MessageReceiverTask implements Runnable {
     private final ServerSocket serverSocket;
     private final MembershipService membershipService;
-    private final ExecutorService executorService;
-    private boolean running;
+    private ExecutorService executorService;
+    private final boolean running;
 
     public MessageReceiverTask(MembershipService membershipService, ServerSocket serverSocket) {
         this.serverSocket = serverSocket;
@@ -28,14 +28,15 @@ public class MessageReceiverTask implements Runnable {
         running = true;
     }
 
-    public void waitAndClose() {
-        running = false;
+    public synchronized void waitAndRestart() {
+        executorService.shutdown();
         try {
             executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-            serverSocket.close();
-        } catch (IOException | InterruptedException e) {
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+        executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
     }
 
     @Override
@@ -53,11 +54,10 @@ public class MessageReceiverTask implements Runnable {
 
                 Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
                 MessageProcessor processor = new MessageProcessor(membershipService, message, clientSocket);
-                executorService.execute(processor);
-            } catch (IOException e) {
-                if (!running) {
-                    break;
+                synchronized (this) {
+                    executorService.execute(processor);
                 }
+            } catch (IOException e) {
 
                 e.printStackTrace();
                 break;

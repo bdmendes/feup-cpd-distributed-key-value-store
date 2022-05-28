@@ -89,6 +89,10 @@ public class MembershipService implements MembershipRMI {
         return multicastHandler;
     }
 
+    public MessageReceiverTask getMessageReceiverTask() {
+        return messageReceiverTask;
+    }
+
     public void initMulticastHandler() throws IOException {
         this.multicastHandler = new MulticastHandler(storageService.getNode(), ipMulticastGroup, this);
     }
