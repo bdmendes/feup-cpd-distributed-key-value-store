@@ -251,6 +251,11 @@ public class JoinedNodeState extends NodeState {
             this.membershipService.setNodeState(new InitNodeState(this.membershipService));
 
             this.membershipService.getMessageReceiverTask().waitAndRestart();
+            try {
+                this.membershipService.getMulticastHandler().waitTasks();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
             try {
                 this.membershipService.getMembershipCounter().incrementAndGet();

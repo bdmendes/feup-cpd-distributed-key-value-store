@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MulticastHandler implements Runnable {
     private static final int MAX_BUF_LEN = 2000;
@@ -18,6 +19,7 @@ public class MulticastHandler implements Runnable {
     private final MembershipService membershipService;
     private final InetSocketAddress multicastAddress;
     private final NetworkInterface networkInterface;
+    private ExecutorService executorService;
     private boolean running = true;
 
     public MulticastHandler(Node node, IPAddress multicastAddress, MembershipService service) throws IOException {
@@ -44,15 +46,21 @@ public class MulticastHandler implements Runnable {
         socket.send(packet);
     }
 
-    public void close() throws IOException {
+    public void waitTasks() throws InterruptedException {
         running = false;
+
+        executorService.shutdown();
+        executorService.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+    }
+
+    public void close() throws IOException {
         socket.leaveGroup(multicastAddress, networkInterface);
         socket.close();
     }
 
     @Override
     public void run() {
-        ExecutorService executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
+        executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
 
         while (running) {
             byte[] buffer = new byte[MAX_BUF_LEN];
