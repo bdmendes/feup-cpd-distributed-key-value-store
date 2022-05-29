@@ -189,13 +189,6 @@ public class MembershipService implements MembershipRMI {
         for (String hash : this.getStorageService().getHashes()) {
             boolean mustTransferHash;
 
-            System.out.println("Hash: " + hash);
-            System.out.println("Joining node hash: " + joiningNodeHash);
-            System.out.println("This node hash: " + thisNodeHash);
-            System.out.println("node compare: " + joiningNodeHash.compareTo(thisNodeHash));
-            System.out.println("joining Hash compare: " + hash.compareTo(joiningNodeHash));
-            System.out.println("this hash compare: " + hash.compareTo(thisNodeHash));
-
             if(joiningNodeHash.compareTo(thisNodeHash) < 0 ) {
                 mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 || hash.compareTo(thisNodeHash) > 0;
             } else mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 && hash.compareTo(thisNodeHash) > 0;

@@ -22,7 +22,7 @@ public class MembershipMessage extends Message {
         nodeId = fields.get("nodeId");
         List<String> nodesRaw = List.of(nodeString.split(","));
 
-        if (nodesRaw.size() > 1) {
+        if (!nodesRaw.get(0).equals("")) {
             nodesRaw.forEach(n -> {
                 String[] parts = n.split("/");
                 nodes.add(new Node(parts[0], Integer.parseInt(parts[1])));
