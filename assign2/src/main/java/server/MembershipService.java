@@ -191,14 +191,13 @@ public class MembershipService implements MembershipRMI {
             try {
                 File file = new File(this.getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                String key = StoreUtils.sha256(bytes);
-                putMessage.setKey(key);
+                putMessage.setKey(hash);
                 putMessage.setValue(bytes);
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
             CommunicationUtils.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
-            this.getStorageService().delete(hash);
+            this.getStorageService().delete(hash); // TODO: do not remove while iterating
         }
     }
 
@@ -214,14 +213,13 @@ public class MembershipService implements MembershipRMI {
             try {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                String key = StoreUtils.sha256(bytes);
-                putMessage.setKey(key);
+                putMessage.setKey(hash);
                 putMessage.setValue(bytes);
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
             CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
-            this.getStorageService().delete(hash);
+            this.getStorageService().delete(hash); // TODO: do not remove while iterating
         }
     }
 }

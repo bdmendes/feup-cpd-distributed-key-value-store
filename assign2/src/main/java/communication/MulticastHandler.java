@@ -23,8 +23,7 @@ public class MulticastHandler implements Runnable {
     private boolean running = true;
 
     public MulticastHandler(Node node, IPAddress multicastAddress, MembershipService service) throws IOException {
-        networkInterface = node.getNetworkInterfaceBindToIP();
-
+        this.networkInterface = node.getNetworkInterfaceBindToIP();
         this.multicastAddress = new InetSocketAddress(multicastAddress.getIp(), multicastAddress.getPort());
         this.membershipService = service;
 
