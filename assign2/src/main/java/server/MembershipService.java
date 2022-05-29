@@ -187,9 +187,24 @@ public class MembershipService implements MembershipRMI {
         PutRelayMessage putMessage = new PutRelayMessage();
 
         for (String hash : this.getStorageService().getHashes()) {
-            if (hash.compareTo(joiningNodeHash) >= 0 && hash.compareTo(thisNodeHash) <= 0) {
+            boolean mustTransferHash;
+
+            System.out.println("Hash: " + hash);
+            System.out.println("Joining node hash: " + joiningNodeHash);
+            System.out.println("This node hash: " + thisNodeHash);
+            System.out.println("node compare: " + joiningNodeHash.compareTo(thisNodeHash));
+            System.out.println("joining Hash compare: " + hash.compareTo(joiningNodeHash));
+            System.out.println("this hash compare: " + hash.compareTo(thisNodeHash));
+
+            if(joiningNodeHash.compareTo(thisNodeHash) < 0 ) {
+                mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 || hash.compareTo(thisNodeHash) > 0;
+            } else mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 && hash.compareTo(thisNodeHash) > 0;
+
+            if (!mustTransferHash) {
                 continue;
             }
+            System.out.println("Transferring key " + hash + " to joining node " + joiningNode.id());
+
             try {
                 File file = new File(this.getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
