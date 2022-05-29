@@ -30,6 +30,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     @Override
     public void run() {
         try {
+            System.out.println(this.message);
             process(this.message, this.clientSocket);
         } catch (IOException e) {
             e.printStackTrace();
@@ -124,22 +125,75 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             return;
         }
 
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            GetReply response = new GetReply();
-            response.setKey(getMessage.getKey());
-            try {
-                byte[] value = membershipService.getStorageService().get(getMessage.getKey());
-                response.setValue(value);
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.FILE_NOT_FOUND);
-            }
-            System.out.println("Getting hash " + getMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
+        if (!responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            CommunicationUtils.dispatchMessageToNode(responsibleNode, message, clientSocket);
+            try {
+                GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNodeWithReply(responsibleNode, getMessage);
+                if (!message.getStatusCode().equals(StatusCode.OK)) {
+                    // TODO: ASSIGN THIS STUFF TO THAT NODE
+                    // OTHER NODE FINDS BC IS MORE UPDATED
+                    throw new RuntimeException();
+                }
+                CommunicationUtils.sendMessage(message, clientSocket);
+                return;
+            } catch (RuntimeException e) {
+                System.out.println("Failed to GET from original node");
+                List<Node> replicationNodes = this.membershipService.getClusterMap().getReplicationNodes(responsibleNode, 3);
+                for (Node node: replicationNodes) {
+                    System.out.println("Dispatching GET replication request for hash " + getMessage.getKey() + " to node " + node);
+                    GetRelayMessage getRelayMessage = new GetRelayMessage();
+                    getRelayMessage.setKey(getMessage.getKey());
+                    getRelayMessage.setTarget(node.id());
+
+                    try {
+                        GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNodeWithReply(node, getRelayMessage);
+                        if (!message.getStatusCode().equals(StatusCode.OK)) {
+                            continue;
+                        }
+                        System.out.println("Successfully GET from replicated node " + node);
+
+                        CommunicationUtils.sendMessage(message, clientSocket);
+                        return;
+                    } catch (Exception ignore) {
+                    }
+                }
+            }
+
+            this.sendErrorResponse(new GetReply(), StatusCode.FILE_NOT_FOUND, getMessage.getKey(), clientSocket);
+            return;
         }
+
+        replyValueFromStore(clientSocket, getMessage.getKey());
+    }
+
+    @Override
+    public void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {
+        System.out.println("Received get relay " + getRelayMessage.getTarget() + " - " + getRelayMessage.getKey());
+        if (!getRelayMessage.getTarget().equals(membershipService.getStorageService().getNode().id())) {
+            return;
+        }
+
+        if (!membershipService.isJoined()) {
+            this.sendErrorResponse(new PutReply(), StatusCode.NODE_NOT_JOINED, getRelayMessage.getKey(), socket);
+            return;
+        }
+
+        replyValueFromStore(socket, getRelayMessage.getKey());
+    }
+
+    private void replyValueFromStore(Socket socket, String key) {
+        GetReply response = new GetReply();
+        response.setKey(key);
+        try {
+            byte[] value = membershipService.getStorageService().get(key);
+            response.setValue(value);
+            response.setStatusCode(StatusCode.OK);
+            System.out.println("Getting hash " + key);
+        } catch (IOException e) {
+            System.out.println(e);
+            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+        }
+        CommunicationUtils.sendMessage(response, socket);
     }
 
     @Override
@@ -168,7 +222,6 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             CommunicationUtils.sendMessage(response, clientSocket);
 
             List<Node> replicationNodes = this.membershipService.getClusterMap().getReplicationNodes(responsibleNode, 3);
-            System.out.println(replicationNodes);
             for (Node node: replicationNodes) {
                 System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to node " + node);
                 PutRelayMessage putRelayMessage = new PutRelayMessage();
@@ -369,5 +422,4 @@ public class MessageProcessor implements Runnable, MessageVisitor {
     public void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {
         CommunicationUtils.sendMessage(putRelayReply, socket);
     }
-
 }

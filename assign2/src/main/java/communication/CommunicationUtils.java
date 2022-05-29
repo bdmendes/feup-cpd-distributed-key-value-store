@@ -48,6 +48,16 @@ public class CommunicationUtils {
         }
     }
 
+    public static Message dispatchMessageToNodeWithReply(Node node, Message message) {
+        try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
+            sendMessage(message, responsibleNodeSocket);
+            Message replyMessage = readMessage(responsibleNodeSocket);
+            return replyMessage;
+        } catch (IOException | RuntimeException e) {
+            throw new RuntimeException("Could not request operation to responsible node");
+        }
+    }
+
     public static void dispatchMessageToNodeWithoutReply(Node node, Message message) {
         try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())){
             sendMessage(message, responsibleNodeSocket);

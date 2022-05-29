@@ -47,4 +47,6 @@ public interface MessageVisitor {
     void processLeader(LeaderMessage leaderMessage, Socket socket);
 
     default void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {};
+
+    default void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {};
 }
