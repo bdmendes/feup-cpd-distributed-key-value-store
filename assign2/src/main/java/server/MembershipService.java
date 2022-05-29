@@ -184,7 +184,9 @@ public class MembershipService implements MembershipRMI {
         String thisNodeHash = StoreUtils.sha256(this.getStorageService()
                 .getNode().id().getBytes(StandardCharsets.UTF_8));
         for (String hash : this.getStorageService().getHashes()) {
-            if (hash.compareTo(joiningNodeHash) >= 0 && hash.compareTo(thisNodeHash) <= 0) {
+            boolean mustTransferHash = joiningNodeHash.compareTo(hash) >= 0
+                    || (hash.compareTo(thisNodeHash) >= 0 && joiningNodeHash.compareTo(thisNodeHash) < 0);
+            if (!mustTransferHash) {
                 continue;
             }
             PutRelayMessage putMessage = new PutRelayMessage();
