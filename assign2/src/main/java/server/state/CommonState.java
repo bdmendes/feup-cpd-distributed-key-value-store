@@ -51,16 +51,17 @@ public class CommonState {
     }
 
     public static void processPutRelay(PutRelayMessage putMessage, Socket clientSocket, MembershipService membershipService) {
-        System.out.println("Received put relay message ");
-        PutReply response = new PutReply();
-        response.setKey(putMessage.getKey());
-        try {
-            membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
-            response.setStatusCode(StatusCode.OK);
-        } catch (IOException e) {
-            response.setStatusCode(StatusCode.ERROR);
-        }
-        System.out.println("Putting hash " + putMessage.getKey());
-        CommunicationUtils.sendMessage(response, clientSocket);
+        // TODO: CHANGE TO PUT RELAY
+        //System.out.println("Received put relay message ");
+        //PutReply response = new PutReply();
+        //response.setKey(putMessage.getKey());
+        //try {
+        //    membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
+        //    response.setStatusCode(StatusCode.OK);
+        //} catch (IOException e) {
+        //    response.setStatusCode(StatusCode.ERROR);
+        //}
+        //System.out.println("Putting hash " + putMessage.getKey());
+        //CommunicationUtils.sendMessage(response, clientSocket);
     }
 }

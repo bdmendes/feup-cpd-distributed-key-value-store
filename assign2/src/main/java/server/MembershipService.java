@@ -192,8 +192,7 @@ public class MembershipService implements MembershipRMI {
                 File file = new File(this.getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
                 String key = StoreUtils.sha256(bytes);
-                putMessage.setKey(key);
-                putMessage.setValue(bytes);
+                putMessage.addValue(key, bytes);
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
@@ -215,8 +214,7 @@ public class MembershipService implements MembershipRMI {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
                 String key = StoreUtils.sha256(bytes);
-                putMessage.setKey(key);
-                putMessage.setValue(bytes);
+                putMessage.addValue(key, bytes);
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
