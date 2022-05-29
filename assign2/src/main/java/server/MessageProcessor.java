@@ -192,7 +192,7 @@ public class MessageProcessor implements Runnable, MessageVisitor {
             return;
         }
 
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeFromHash(putRelayMessage.getTarget());
+        Node responsibleNode = this.membershipService.getClusterMap().getNodeFromId(putRelayMessage.getTarget());
 
         System.out.println("Received put relay message: " + responsibleNode + " " + putRelayMessage.getTarget());
 

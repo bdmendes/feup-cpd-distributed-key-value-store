@@ -42,7 +42,8 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(id.getBytes(StandardCharsets.UTF_8)));
     }
 
-    public Node getNodeFromHash(String hash) {
+    public Node getNodeFromId(String id) {
+        String hash = StoreUtils.sha256(id.getBytes(StandardCharsets.UTF_8));
         return clusterNodes.get(hash);
     }
 
