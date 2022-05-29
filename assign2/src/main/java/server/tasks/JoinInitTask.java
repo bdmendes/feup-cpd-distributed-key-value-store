@@ -38,7 +38,9 @@ public class JoinInitTask implements Runnable {
         serverSocket.setSoTimeout(this.blockMiliseconds);
         Socket clientSocket;
         try {
+            System.out.println("Waiting for a message...");
             clientSocket = serverSocket.accept();
+            System.out.println("Received a message!");
         } catch (SocketTimeoutException e) {
             return null;
         }
@@ -48,6 +50,8 @@ public class JoinInitTask implements Runnable {
         while (!messageReader.isComplete()) {
             messageReader.read(in);
         }
+
+        System.out.println("Received message: " + messageReader.getHeader());
 
         return MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
     }

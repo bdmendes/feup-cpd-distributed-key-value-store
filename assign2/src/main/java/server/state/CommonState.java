@@ -1,15 +1,15 @@
 package server.state;
 
 import communication.CommunicationUtils;
-import message.MembershipMessage;
-import message.PutRelayMessage;
-import message.PutReply;
-import message.StatusCode;
+import message.*;
 import server.MembershipService;
 import server.Node;
+import server.StorageService;
 
 import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -51,17 +51,25 @@ public class CommonState {
     }
 
     public static void processPutRelay(PutRelayMessage putMessage, Socket clientSocket, MembershipService membershipService) {
-        // TODO: CHANGE TO PUT RELAY
-        //System.out.println("Received put relay message ");
-        //PutReply response = new PutReply();
-        //response.setKey(putMessage.getKey());
-        //try {
-        //    membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
-        //    response.setStatusCode(StatusCode.OK);
-        //} catch (IOException e) {
-        //    response.setStatusCode(StatusCode.ERROR);
-        //}
-        //System.out.println("Putting hash " + putMessage.getKey());
-        //CommunicationUtils.sendMessage(response, clientSocket);
+        System.out.println("Received put relay message ");
+        PutRelayReply response = new PutRelayReply();
+
+        try {
+            for (Map.Entry<String, byte[]> entry : putMessage.getValues().entrySet()) {
+                String key = entry.getKey();
+                byte[] value = entry.getValue();
+                System.out.println("Putting hash " + key);
+
+                membershipService.getStorageService().put(key, value);
+                response.reportSuccess(key);
+            }
+
+            response.setStatusCode(StatusCode.OK);
+        } catch (IOException e) {
+            System.out.println("Error storing file");
+
+            response.setStatusCode(StatusCode.ERROR);
+        }
+        CommunicationUtils.sendMessage(response, clientSocket);
     }
 }

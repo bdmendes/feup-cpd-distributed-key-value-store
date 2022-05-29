@@ -11,6 +11,7 @@ import java.io.IOException;
 import java.net.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class MulticastHandler implements Runnable {
@@ -36,8 +37,6 @@ public class MulticastHandler implements Runnable {
 
         socket = new MulticastSocket(multicastAddress.getPort());
         socket.setNetworkInterface(networkInterface);
-
-        socket.joinGroup(this.multicastAddress, networkInterface);
     }
 
     public void sendMessage(Message message) throws IOException {
@@ -60,6 +59,11 @@ public class MulticastHandler implements Runnable {
 
     @Override
     public void run() {
+        try {
+            socket.joinGroup(this.multicastAddress, networkInterface);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         executorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors() / 2);
 
         while (running) {
@@ -77,7 +81,7 @@ public class MulticastHandler implements Runnable {
 
                 MessageProcessor processor = new MessageProcessor(membershipService, message, null);
                 executorService.execute(processor);
-            } catch (IOException e) {
+            } catch (IOException | RejectedExecutionException e) {
                 if (running) {
                     throw new RuntimeException(e);
                 }

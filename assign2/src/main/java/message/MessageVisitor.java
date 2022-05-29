@@ -36,6 +36,10 @@ public interface MessageVisitor {
 
     }
 
+    default void processPutRelayReply(PutRelayReply putReply, Socket socket) {
+
+    }
+
     default void processDeleteReply(DeleteReply deleteReply, Socket socket) {
 
     }

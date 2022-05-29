@@ -249,7 +249,6 @@ public class JoinedNodeState extends NodeState {
             }
 
             this.membershipService.setNodeState(new InitNodeState(this.membershipService));
-
             this.membershipService.getMessageReceiverTask().waitAndRestart();
             try {
                 this.membershipService.getMulticastHandler().waitTasks();
@@ -275,7 +274,7 @@ public class JoinedNodeState extends NodeState {
             }
 
             this.membershipService.transferAllMyKeysToMySuccessor();
-
+            this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();
 
