@@ -165,16 +165,12 @@ public class MembershipService implements MembershipRMI {
 
     public void sendToNextAvailableNode(Message message) {
         Node currentNode = getStorageService().getNode();
-        Node nextNode;
-        boolean notSent = true;
-
-        while (notSent) {
-            nextNode = getClusterMap().getNodeSuccessor(currentNode);
-            try {
-                CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
-                notSent = false;
-            } catch (RuntimeException e) {
+        while (true) {
+            Node nextNode = getClusterMap().getNodeSuccessor(currentNode);
+            if (!CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message)) {
                 currentNode = nextNode;
+            } else {
+                return;
             }
         }
     }
@@ -198,7 +194,10 @@ public class MembershipService implements MembershipRMI {
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            CommunicationUtils.dispatchMessageToNodeWithoutReply(joiningNode, putMessage);
+            if (!CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage, null)) {
+                this.removeUnavailableNode(joiningNode);
+                return;
+            }
             this.getStorageService().delete(hash); // TODO: do not remove while iterating
         }
     }
@@ -220,8 +219,20 @@ public class MembershipService implements MembershipRMI {
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null);
+            if (!CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null)) {
+                this.removeUnavailableNode(successorNode);
+                return;
+            }
             this.getStorageService().delete(hash); // TODO: do not remove while iterating
         }
+    }
+
+    public void removeUnavailableNode(Node node) {
+        Integer nodeCounter = this.membershipLog.get(node.id());
+        if (nodeCounter != null) {
+            this.membershipLog.put(node.id(), nodeCounter + 1);
+        }
+        this.clusterMap.remove(node);
+        System.out.println(node + " is unavailable. Removed from cluster map");
     }
 }

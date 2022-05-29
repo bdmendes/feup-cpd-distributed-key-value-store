@@ -1,10 +1,7 @@
 package server.state;
 
 import communication.CommunicationUtils;
-import message.MembershipMessage;
-import message.PutRelayMessage;
-import message.PutReply;
-import message.StatusCode;
+import message.*;
 import server.MembershipService;
 import server.Node;
 
@@ -50,8 +47,7 @@ public class CommonState {
         System.out.println("Received membership message " + membershipService.getMembershipLog().getMap().entrySet());
     }
 
-    public static void processPutRelay(PutRelayMessage putMessage, Socket clientSocket, MembershipService membershipService) {
-        System.out.println("Received put relay message ");
+    public static void processLocalPut(PutMessage putMessage, Socket clientSocket, MembershipService membershipService) {
         PutReply response = new PutReply();
         response.setKey(putMessage.getKey());
         try {
