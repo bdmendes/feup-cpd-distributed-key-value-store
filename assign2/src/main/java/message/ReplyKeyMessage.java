@@ -1,5 +1,12 @@
 package message;
 
 public abstract class ReplyKeyMessage extends ReplyMessage {
-    public abstract void setKey(String key);
+    private String key;
+    public void setKey(String key){
+        this.key = key;
+    }
+
+    public String getKey() {
+        return this.key;
+    }
 }

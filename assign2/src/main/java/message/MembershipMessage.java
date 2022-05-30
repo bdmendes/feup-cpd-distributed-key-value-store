@@ -31,16 +31,12 @@ public class MembershipMessage extends Message {
         MembershipLog.readMembershipLogFromData(membershipLog, data);
     }
 
-    public void setMembershipLog(Map<String, Integer> membershipLog) {
-        this.membershipLog = membershipLog;
+    public Set<Node> getNodes() {
+        return nodes;
     }
 
     public void setNodes(Set<Node> nodes) {
         this.nodes = nodes;
-    }
-
-    public Set<Node> getNodes() {
-        return nodes;
     }
 
     public void addNode(Node node) {
@@ -51,12 +47,16 @@ public class MembershipMessage extends Message {
         return membershipLog;
     }
 
-    public void setNodeId(String nodeId) {
-        this.nodeId = nodeId;
+    public void setMembershipLog(Map<String, Integer> membershipLog) {
+        this.membershipLog = membershipLog;
     }
 
     public String getNodeId() {
         return nodeId;
+    }
+
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
     }
 
     @Override

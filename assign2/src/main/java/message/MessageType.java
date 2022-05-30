@@ -2,6 +2,7 @@ package message;
 
 public enum MessageType {
     PUT,
+    PUT_RELAY,
     PUT_REPLY,
     GET,
     GET_REPLY,

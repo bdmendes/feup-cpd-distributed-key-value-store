@@ -29,28 +29,28 @@ public class JoinMessage extends Message {
         this.nodeId = nodeId;
     }
 
-    public void setCounter(int counter) {
-        this.counter = counter;
-    }
-
     public int getCounter() {
         return counter;
     }
 
-    public void setConnectionPort(int connectionPort) {
-        this.connectionPort = connectionPort;
+    public void setCounter(int counter) {
+        this.counter = counter;
     }
 
     public int getConnectionPort() {
         return connectionPort;
     }
 
-    public void setPort(int port) {
-        this.port = port;
+    public void setConnectionPort(int connectionPort) {
+        this.connectionPort = connectionPort;
     }
 
     public int getPort() {
         return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
     }
 
     @Override
