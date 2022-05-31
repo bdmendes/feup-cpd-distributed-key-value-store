@@ -16,6 +16,7 @@ import java.net.Socket;
 public class CommunicationUtils {
     private static final int MAX_TRIES = 3;
     private static final int DELAY_MS = 200;
+
     public static void sendMessage(Message message, Socket socket) {
         try {
             DataOutputStream dataOutputStream = new DataOutputStream(socket.getOutputStream());
@@ -39,8 +40,8 @@ public class CommunicationUtils {
         }
     }
 
-    public static boolean dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
-        for (int i = 0; i < MAX_TRIES; i++){
+    public static Message dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
+        for (int i = 0; i < MAX_TRIES; i++) {
             try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())) {
                 sendMessage(message, responsibleNodeSocket);
                 Message replyMessage = readMessage(responsibleNodeSocket);
@@ -48,7 +49,7 @@ public class CommunicationUtils {
                     System.out.println("Sending dispatched request back to the client");
                     sendMessage(replyMessage, clientSocket);
                 }
-                return true;
+                return replyMessage;
             } catch (IOException | RuntimeException ignored) {
                 try {
                     Thread.sleep(DELAY_MS);
@@ -57,11 +58,11 @@ public class CommunicationUtils {
                 }
             }
         }
-        return false;
+        return null;
     }
 
     public static boolean dispatchMessageToNodeWithoutReply(Node node, Message message) {
-        for (int i = 0; i < MAX_TRIES; i++){
+        for (int i = 0; i < MAX_TRIES; i++) {
             try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())) {
                 sendMessage(message, responsibleNodeSocket);
                 return true;

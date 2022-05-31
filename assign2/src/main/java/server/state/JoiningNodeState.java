@@ -12,7 +12,7 @@ public class JoiningNodeState extends InitNodeState {
 
     @Override
     public void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
-        CommonState.processLocalPut(putRelayMessage, socket, this.membershipService);
+        CommonState.processPutRelay(putRelayMessage, socket, this.membershipService);
     }
 
     @Override
@@ -20,4 +20,3 @@ public class JoiningNodeState extends InitNodeState {
         return true; // TODO: return IN_PROGRESS
     }
 }
-

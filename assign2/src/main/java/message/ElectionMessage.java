@@ -2,7 +2,6 @@ package message;
 
 import utils.MembershipLog;
 
-import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -16,7 +15,7 @@ public class ElectionMessage extends Message {
     }
 
     public ElectionMessage(String headers, byte[] data) {
-        membershipLog = new HashMap<String, Integer>();
+        membershipLog = new HashMap<>();
         Map<String, String> fields = decodeFields(headers);
         origin = fields.get("origin");
 
@@ -33,7 +32,7 @@ public class ElectionMessage extends Message {
     }
 
     @Override
-    public void accept(MessageVisitor visitor, Socket socket) throws IOException {
+    public void accept(MessageVisitor visitor, Socket socket) {
         visitor.processElection(this, socket);
     }
 

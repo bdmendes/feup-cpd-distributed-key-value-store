@@ -50,7 +50,7 @@ public class JoinedNodeState extends NodeState {
             CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            if (!CommunicationUtils.dispatchMessageToNode(responsibleNode, getMessage, clientSocket)){
+            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, getMessage, clientSocket) == null) {
                 this.membershipService.removeUnavailableNode(responsibleNode);
                 this.sendNodeDownMessage(new GetReply(), getMessage.getKey(), clientSocket);
             }
@@ -67,10 +67,19 @@ public class JoinedNodeState extends NodeState {
 
         // TODO: Handle replication
         if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            CommonState.processLocalPut(putMessage, clientSocket, this.membershipService);
+            PutReply response = new PutReply();
+            response.setKey(putMessage.getKey());
+            try {
+                membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
+                response.setStatusCode(StatusCode.OK);
+            } catch (IOException e) {
+                response.setStatusCode(StatusCode.ERROR);
+            }
+            System.out.println("Putting hash " + putMessage.getKey());
+            CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            if (!CommunicationUtils.dispatchMessageToNode(responsibleNode, putMessage, clientSocket)){
+            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, putMessage, clientSocket) == null) {
                 // TODO: put on down node successor
                 this.membershipService.removeUnavailableNode(responsibleNode);
                 this.sendNodeDownMessage(new PutReply(), putMessage.getKey(), clientSocket);
@@ -80,7 +89,7 @@ public class JoinedNodeState extends NodeState {
 
     @Override
     public void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
-        CommonState.processLocalPut(putRelayMessage, socket, this.membershipService);
+        CommonState.processPutRelay(putRelayMessage, socket, this.membershipService);
     }
 
     @Override
@@ -102,7 +111,7 @@ public class JoinedNodeState extends NodeState {
             CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to node " + responsibleNode);
-            if (!CommunicationUtils.dispatchMessageToNode(responsibleNode, deleteMessage, clientSocket)){
+            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, deleteMessage, clientSocket) == null) {
                 this.membershipService.removeUnavailableNode(responsibleNode);
                 this.sendNodeDownMessage(new DeleteReply(), deleteMessage.getKey(), clientSocket);
             }
@@ -256,12 +265,11 @@ public class JoinedNodeState extends NodeState {
     @Override
     public boolean leave() {
         synchronized (this.membershipService.joinLeaveLock) {
-            if(!this.membershipService.isJoined()) {
+            if (!this.membershipService.isJoined()) {
                 return true;
             }
 
             this.membershipService.setNodeState(new InitNodeState(this.membershipService));
-
             this.membershipService.getMessageReceiverTask().waitAndRestart();
             try {
                 this.membershipService.getMulticastHandler().waitTasks();
@@ -287,7 +295,7 @@ public class JoinedNodeState extends NodeState {
             }
 
             this.membershipService.transferAllMyKeysToMySuccessor();
-
+            this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();
 
