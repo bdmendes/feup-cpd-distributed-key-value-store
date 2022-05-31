@@ -6,7 +6,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 
 public abstract class MessageReaderState {
-    protected MessageReader context;
+    protected final MessageReader context;
 
     public MessageReaderState(MessageReader context) {
         this.context = context;

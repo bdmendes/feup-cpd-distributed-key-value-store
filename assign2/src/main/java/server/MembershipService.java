@@ -47,7 +47,7 @@ public class MembershipService implements MembershipRMI {
         this.messageReceiverTask = null;
     }
 
-    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) throws IOException {
+    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
@@ -166,16 +166,12 @@ public class MembershipService implements MembershipRMI {
 
     public void sendToNextAvailableNode(Message message) {
         Node currentNode = getStorageService().getNode();
-        Node nextNode;
-        boolean notSent = true;
-
-        while (notSent) {
-            nextNode = getClusterMap().getNodeSuccessor(currentNode);
-            try {
-                CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
-                notSent = false;
-            } catch (RuntimeException e) {
+        while (true) {
+            Node nextNode = getClusterMap().getNodeSuccessor(currentNode);
+            if (!CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message)) {
                 currentNode = nextNode;
+            } else {
+                return;
             }
         }
     }
@@ -187,11 +183,12 @@ public class MembershipService implements MembershipRMI {
         PutRelayMessage putMessage = new PutRelayMessage();
 
         for (String hash : this.getStorageService().getHashes()) {
-            boolean mustTransferHash;
-
-            if(joiningNodeHash.compareTo(thisNodeHash) < 0 ) {
-                mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 || hash.compareTo(thisNodeHash) > 0;
-            } else mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 && hash.compareTo(thisNodeHash) > 0;
+            boolean hashIsLessThanJoiningNode = hash.compareTo(joiningNodeHash) <= 0;
+            boolean hashIsHigherThanThisNode = hash.compareTo(thisNodeHash) >= 0;
+            boolean mustTransferHash =
+                    joiningNodeHash.compareTo(thisNodeHash) < 0
+                            ? hashIsLessThanJoiningNode || hashIsHigherThanThisNode
+                            : hashIsLessThanJoiningNode && hashIsHigherThanThisNode;
 
             if (!mustTransferHash) {
                 continue;
@@ -207,14 +204,19 @@ public class MembershipService implements MembershipRMI {
             }
         }
 
-        if(putMessage.getValues().size() == 0) {
+        if (putMessage.getValues().isEmpty()) {
             return;
         }
+        transferKeysAndDeleteLocals(joiningNode, putMessage);
+    }
 
+    private void transferKeysAndDeleteLocals(Node joiningNode, PutRelayMessage putMessage) {
         try {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage);
-
-            for(String hash : putReply.getSuccessfulHashes()) {
+            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage, null);
+            if (putReply == null) {
+                return;
+            }
+            for (String hash : putReply.getSuccessfulHashes()) {
                 this.getStorageService().delete(hash);
             }
         } catch (ClassCastException e) {
@@ -240,18 +242,18 @@ public class MembershipService implements MembershipRMI {
             }
         }
 
-        if(putMessage.getValues().size() == 0) {
+        if (putMessage.getValues().size() == 0) {
             return;
         }
+        transferKeysAndDeleteLocals(successorNode, putMessage);
+    }
 
-        try {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(successorNode, putMessage);
-
-            for(String hash : putReply.getSuccessfulHashes()) {
-                this.getStorageService().delete(hash);
-            }
-        } catch (ClassCastException e) {
-            e.printStackTrace();
+    public void removeUnavailableNode(Node node) {
+        Integer nodeCounter = this.membershipLog.get(node.id());
+        if (nodeCounter != null) {
+            this.membershipLog.put(node.id(), nodeCounter + 1);
         }
+        this.clusterMap.remove(node);
+        System.out.println(node + " is unavailable. Removed from cluster map");
     }
 }

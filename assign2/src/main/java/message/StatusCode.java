@@ -5,5 +5,6 @@ public enum StatusCode {
     ERROR,
     FILE_NOT_FOUND,
     NODE_NOT_JOINED,
-    UNKNOWN_CLUSTER_VIEW
+    UNKNOWN_CLUSTER_VIEW,
+    NODE_IS_DOWN
 }

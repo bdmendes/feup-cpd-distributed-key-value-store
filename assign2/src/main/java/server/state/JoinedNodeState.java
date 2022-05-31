@@ -20,6 +20,12 @@ public class JoinedNodeState extends NodeState {
         multicastHandlerThread.start();
     }
 
+    private void sendNodeDownMessage(ReplyKeyMessage response, String key, Socket clientSocket) {
+        response.setKey(key);
+        response.setStatusCode(StatusCode.NODE_IS_DOWN);
+        CommunicationUtils.sendMessage(response, clientSocket);
+    }
+
     @Override
     public void processGet(GetMessage getMessage, Socket clientSocket) {
         Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
@@ -28,7 +34,9 @@ public class JoinedNodeState extends NodeState {
             return;
         }
 
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
+        // TODO: Handle replication
+        if (this.membershipService.getStorageService().getHashes().contains(getMessage.getKey())
+                || responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             GetReply response = new GetReply();
             response.setKey(getMessage.getKey());
             try {
@@ -42,7 +50,10 @@ public class JoinedNodeState extends NodeState {
             CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            CommunicationUtils.dispatchMessageToNode(responsibleNode, getMessage, clientSocket);
+            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, getMessage, clientSocket) == null) {
+                this.membershipService.removeUnavailableNode(responsibleNode);
+                this.sendNodeDownMessage(new GetReply(), getMessage.getKey(), clientSocket);
+            }
         }
     }
 
@@ -54,6 +65,7 @@ public class JoinedNodeState extends NodeState {
             return;
         }
 
+        // TODO: Handle replication
         if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             PutReply response = new PutReply();
             response.setKey(putMessage.getKey());
@@ -67,7 +79,11 @@ public class JoinedNodeState extends NodeState {
             CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            CommunicationUtils.dispatchMessageToNode(responsibleNode, putMessage, clientSocket);
+            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, putMessage, clientSocket) == null) {
+                // TODO: put on down node successor
+                this.membershipService.removeUnavailableNode(responsibleNode);
+                this.sendNodeDownMessage(new PutReply(), putMessage.getKey(), clientSocket);
+            }
         }
     }
 
@@ -84,7 +100,9 @@ public class JoinedNodeState extends NodeState {
             return;
         }
 
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
+        // TODO: Handle replication
+        if (this.membershipService.getStorageService().getHashes().contains(deleteMessage.getKey())
+                || responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
             boolean deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
             DeleteReply response = new DeleteReply();
             response.setKey(deleteMessage.getKey());
@@ -93,7 +111,10 @@ public class JoinedNodeState extends NodeState {
             CommunicationUtils.sendMessage(response, clientSocket);
         } else {
             System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to node " + responsibleNode);
-            CommunicationUtils.dispatchMessageToNode(responsibleNode, deleteMessage, clientSocket);
+            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, deleteMessage, clientSocket) == null) {
+                this.membershipService.removeUnavailableNode(responsibleNode);
+                this.sendNodeDownMessage(new DeleteReply(), deleteMessage.getKey(), clientSocket);
+            }
         }
     }
 
@@ -244,7 +265,7 @@ public class JoinedNodeState extends NodeState {
     @Override
     public boolean leave() {
         synchronized (this.membershipService.joinLeaveLock) {
-            if(!this.membershipService.isJoined()) {
+            if (!this.membershipService.isJoined()) {
                 return true;
             }
 

@@ -50,18 +50,24 @@ public class Store {
         String ipMulticast = args[0];
         String ipMulticastPort = args[1];
         String nodeId = args[2];
-        int storePort;
+        int storePort = -1;
 
         try {
             storePort = Integer.parseInt(args[3]);
         } catch (NumberFormatException e) {
             System.out.println("Store port must be an integer");
             System.exit(1);
-            return;
         }
 
         Node node = new Node(nodeId, storePort);
+        if (node.getNetworkInterfaceBindToIP() == null) {
+            System.err.println("The specified ip address is not bound to any network interface on your machine");
+            System.err.println("If you want to add it to the loopback interface, run the utility script add_lo_addr.sh <nodeIP>");
+            System.exit(1);
+        }
+
         StorageService storageService = new StorageService(node);
+
         try {
             ServerSocket receiveSocket = new ServerSocket();
             receiveSocket.bind(new InetSocketAddress(nodeId, storePort));

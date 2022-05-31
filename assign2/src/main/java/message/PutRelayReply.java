@@ -1,6 +1,5 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -14,7 +13,6 @@ public class PutRelayReply extends ReplyMessage {
         Map<String, String> fields = decodeFields(headers);
         String hashes = fields.get("hashes");
         successfulHashes = List.of(hashes.split(","));
-
     }
 
     public PutRelayReply() {
@@ -39,7 +37,7 @@ public class PutRelayReply extends ReplyMessage {
     }
 
     @Override
-    public void accept(MessageVisitor visitor, Socket socket) throws IOException {
+    public void accept(MessageVisitor visitor, Socket socket) {
         visitor.processPutRelayReply(this, socket);
     }
 }

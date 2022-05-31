@@ -148,6 +148,7 @@ public class TestClient {
             }
 
             try (Socket socket = new Socket(nodeAccessPoint.getIp(), nodeAccessPoint.getPort())) {
+                socket.setSoTimeout(1000);
                 OutputStream output = socket.getOutputStream();
                 output.write(msg.encode());
 
@@ -162,8 +163,8 @@ public class TestClient {
 
                 Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
                 visitor.process(message, socket);
-            } catch (UnknownHostException e) {
-                System.out.println("Unknown host");
+            } catch (Exception e) {
+                System.out.println("Could not connect to client: " + e.getMessage());
                 System.exit(1);
             }
         }

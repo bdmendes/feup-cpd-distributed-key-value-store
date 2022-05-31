@@ -10,7 +10,6 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 
 import static message.MessageConstants.END_OF_LINE;
-import static org.junit.jupiter.api.Assertions.*;
 
 class PutRelayMessageTest {
     @Test
@@ -27,14 +26,12 @@ class PutRelayMessageTest {
         BufferedReader reader = new BufferedReader(new StringReader(new String(encoded)));
         MessageReader messageReader = new MessageReader();
 
-        while(!messageReader.isComplete()) {
+        while (!messageReader.isComplete()) {
             messageReader.read(reader);
         }
 
         PutRelayMessage decoded = (PutRelayMessage) MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
 
-        decoded.getValues().forEach((key, value) -> {
-            Assertions.assertArrayEquals(message.getValues().get(key), value);
-        });
+        decoded.getValues().forEach((key, value) -> Assertions.assertArrayEquals(message.getValues().get(key), value));
     }
 }

@@ -18,16 +18,16 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class JoinInitTask implements Runnable {
-    private final int blockMiliseconds;
+    private final int blockMilliseconds;
     private final ServerSocket serverSocket;
     private final MembershipService membershipService;
     private final MulticastHandler multicastHandler;
     private final Message retransmitMessage;
     private boolean running;
 
-    public JoinInitTask(MembershipService service, ServerSocket socket, Message retransmit, int blockMiliseconds) {
+    public JoinInitTask(MembershipService service, ServerSocket socket, Message retransmit, int blockMilliseconds) {
         this.membershipService = service;
-        this.blockMiliseconds = blockMiliseconds;
+        this.blockMilliseconds = blockMilliseconds;
         this.multicastHandler = service.getMulticastHandler();
         this.serverSocket = socket;
         this.retransmitMessage = retransmit;
@@ -35,7 +35,7 @@ public class JoinInitTask implements Runnable {
     }
 
     private Message receiveMessage() throws IOException {
-        serverSocket.setSoTimeout(this.blockMiliseconds);
+        serverSocket.setSoTimeout(this.blockMilliseconds);
         Socket clientSocket;
         try {
             clientSocket = serverSocket.accept();
