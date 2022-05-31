@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 
 public class GetReply extends ReplyKeyMessage {
-    private String key;
     private byte[] value;
 
     public GetReply() {
@@ -16,7 +15,7 @@ public class GetReply extends ReplyKeyMessage {
 
     public GetReply(String headers, byte[] body) {
         Map<String, String> fields = decodeFields(headers);
-        key = fields.get("key");
+        setKey(fields.get("key"));
         value = body;
     }
 
@@ -24,22 +23,14 @@ public class GetReply extends ReplyKeyMessage {
         return value;
     }
 
-    public String getKey() {
-        return key;
-    }
-
     public void setValue(byte[] value) {
         this.value = value;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
     }
 
     @Override
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
-        fields.put("key", key);
+        fields.put("key", getKey());
 
         byte[] body;
         body = Objects.requireNonNullElseGet(value, () -> new byte[0]);

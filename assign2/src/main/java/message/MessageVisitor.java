@@ -8,6 +8,10 @@ public interface MessageVisitor {
 
     }
 
+    default void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
+
+    }
+
     default void processGet(GetMessage getMessage, Socket socket) {
 
     }
@@ -36,17 +40,23 @@ public interface MessageVisitor {
 
     }
 
-    default void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
+    void process(Message message, Socket socket) throws IOException;
+
+    default void processElection(ElectionMessage electionMessage, Socket socket) {
 
     }
 
-    void process(Message message, Socket socket) throws IOException;
+    default void processLeader(LeaderMessage leaderMessage, Socket socket) {
 
-    void processElection(ElectionMessage electionMessage, Socket socket);
+    }
 
-    void processLeader(LeaderMessage leaderMessage, Socket socket);
+    default void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {
+    }
 
-    default void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {};
+    ;
 
-    default void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {};
+    default void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {
+    }
+
+    ;
 }

@@ -1,7 +1,7 @@
 package client;
 
-import communication.RMIAddress;
 import communication.IPAddress;
+import communication.RMIAddress;
 import message.*;
 import message.messagereader.MessageReader;
 import server.MembershipRMI;
@@ -15,14 +15,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 
 public class TestClient {
-    private record ClientArgs(String host, String operation, String operand) {
-        public ClientArgs(String host, String operation) {
-            this(host, operation, null);
-        }
-    }
-
     private static void printUsage() {
-            System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
+        System.out.println("Usage: java TestClient <node_ap> <operation> [<opnd>]");
     }
 
     private static ClientArgs parseArgs(String[] args) {
@@ -154,6 +148,7 @@ public class TestClient {
             }
 
             try (Socket socket = new Socket(nodeAccessPoint.getIp(), nodeAccessPoint.getPort())) {
+                socket.setSoTimeout(1000);
                 OutputStream output = socket.getOutputStream();
                 output.write(msg.encode());
 
@@ -168,10 +163,16 @@ public class TestClient {
 
                 Message message = MessageFactory.createMessage(messageReader.getHeader(), messageReader.getBody());
                 visitor.process(message, socket);
-            } catch (UnknownHostException e) {
-                System.out.println("Unknown host");
+            } catch (Exception e) {
+                System.out.println("Could not connect to client: " + e.getMessage());
                 System.exit(1);
             }
+        }
+    }
+
+    private record ClientArgs(String host, String operation, String operand) {
+        public ClientArgs(String host, String operation) {
+            this(host, operation, null);
         }
     }
 }

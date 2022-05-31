@@ -16,7 +16,7 @@ public class MembershipTask implements Runnable {
 
     @Override
     public void run() {
-        if (!membershipService.isJoined() || !membershipService.isLeader()) {
+        if (!membershipService.getNodeState().joined() || !membershipService.isLeader()) {
             return;
         }
 

@@ -7,10 +7,10 @@ import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class MessageReader {
-    private MessageReaderState state;
     protected StringBuilder header;
     protected int length;
     protected char[] body;
+    private MessageReaderState state;
 
     public MessageReader() {
         state = new TypeReaderState(this);

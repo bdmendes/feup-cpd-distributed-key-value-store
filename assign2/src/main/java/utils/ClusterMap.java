@@ -24,7 +24,7 @@ public class ClusterMap {
         return new HashSet<>(clusterNodes.values());
     }
 
-    public void put(Node node) {
+    public synchronized void put(Node node) {
         clusterNodes.put(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)), node);
         this.writeToFile();
     }
@@ -33,7 +33,7 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)));
     }
 
-    public void removeHash(String hash) {
+    public synchronized void removeHash(String hash) {
         clusterNodes.remove(hash);
         this.writeToFile();
     }
@@ -47,7 +47,7 @@ public class ClusterMap {
         return clusterNodes.get(hash);
     }
 
-    public void clear() {
+    public synchronized void clear() {
         clusterNodes.clear();
         this.writeToFile();
     }
@@ -66,7 +66,7 @@ public class ClusterMap {
         return this.getNodeSuccessor(hash);
     }
 
-    private Node getNodeSuccessor(String hash) {
+    private synchronized Node getNodeSuccessor(String hash) {
         if (clusterNodes.isEmpty()) {
             return null;
         }

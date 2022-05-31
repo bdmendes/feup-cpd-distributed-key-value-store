@@ -9,7 +9,8 @@ public class PutRelayMessage extends Message {
     private String target;
     private byte[] value;
 
-    public PutRelayMessage() {}
+    public PutRelayMessage() {
+    }
 
     public PutRelayMessage(String headers, byte[] data) {
         Map<String, String> fields = decodeFields(headers);

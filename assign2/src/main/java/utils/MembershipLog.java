@@ -19,44 +19,6 @@ public class MembershipLog {
         this.filePath = filePath;
         this.readFromFile();
     }
-    public Map<String, Integer> getMap() {
-        return membershipLog;
-    }
-
-    public Integer put(String nodeId, Integer nodeMembershipCounter) {
-        membershipLog.remove(nodeId);
-        Integer status = membershipLog.put(nodeId, nodeMembershipCounter);
-        writeToFile();
-        return status;
-    }
-
-    public Integer get(String nodeId) {
-        return membershipLog.get(nodeId);
-    }
-
-    public void clear() {
-        membershipLog.clear();
-        this.writeToFile();
-    }
-
-    public int totalCounter() {
-        return membershipLog.values().stream().mapToInt(Integer::intValue).sum();
-    }
-
-    public Map<String, Integer> getMostRecentLogs(int numberOfLogs) {
-        Map<String, Integer> mostRecentLogs = new LinkedHashMap<>();
-        int counter = 0;
-        int size = membershipLog.size();
-        int start = size - numberOfLogs;
-
-        for (Map.Entry<String, Integer> entry : membershipLog.entrySet()) {
-            if (counter >= start) {
-                mostRecentLogs.put(entry.getKey(), entry.getValue());
-            }
-            counter++;
-        }
-        return mostRecentLogs;
-    }
 
     public static void readMembershipLogFromData(Map<String, Integer> membershipLog, byte[] data) {
         Scanner scanner = new Scanner(new String(data, StandardCharsets.UTF_8));
@@ -79,8 +41,55 @@ public class MembershipLog {
         return stringBuilder.toString().getBytes(StandardCharsets.UTF_8);
     }
 
+    public Map<String, Integer> getMap() {
+        return membershipLog;
+    }
+
+    public synchronized Integer put(String nodeId, Integer nodeMembershipCounter) {
+        membershipLog.remove(nodeId);
+        Integer status = membershipLog.put(nodeId, nodeMembershipCounter);
+        writeToFile();
+        return status;
+    }
+
+    public Integer get(String nodeId) {
+        return membershipLog.get(nodeId);
+    }
+
+    public synchronized void clear() {
+        membershipLog.clear();
+        this.writeToFile();
+    }
+
+    public int totalCounter() {
+        Collection<Integer> values = membershipLog.values();
+
+        synchronized (membershipLog) {
+            return values.stream().mapToInt(Integer::intValue).sum();
+        }
+    }
+
+    public Map<String, Integer> getMostRecentLogs(int numberOfLogs) {
+        Map<String, Integer> mostRecentLogs = new LinkedHashMap<>();
+        int counter = 0;
+
+        synchronized (membershipLog) {
+            int size = membershipLog.size();
+            int start = size - numberOfLogs;
+
+            for (Map.Entry<String, Integer> entry : membershipLog.entrySet()) {
+                if (counter >= start) {
+                    mostRecentLogs.put(entry.getKey(), entry.getValue());
+                }
+                counter++;
+            }
+        }
+
+        return mostRecentLogs;
+    }
+
     private void readFromFile() {
-        if (filePath == null){
+        if (filePath == null) {
             return;
         }
         byte[] bytes;
@@ -93,7 +102,7 @@ public class MembershipLog {
     }
 
     private void writeToFile() {
-        if (filePath == null){
+        if (filePath == null) {
             return;
         }
         byte[] bytes = MembershipLog.writeMembershipLogToData(membershipLog);

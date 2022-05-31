@@ -1,7 +1,5 @@
 package message;
 
-import utils.MembershipLog;
-
 import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
@@ -11,7 +9,8 @@ public class LeaderMessage extends Message {
 
     private String leaderNode;
 
-    public LeaderMessage() {}
+    public LeaderMessage() {
+    }
 
     public LeaderMessage(String headers) {
         Map<String, String> fields = decodeFields(headers);
@@ -26,16 +25,17 @@ public class LeaderMessage extends Message {
 
         return encodeWithFields(MessageType.LEADER, fields, data);
     }
+
     @Override
     public void accept(MessageVisitor visitor, Socket socket) throws IOException {
         visitor.processLeader(this, socket);
     }
 
-    public void setLeaderNode(String leaderNode) {
-        this.leaderNode = leaderNode;
-    }
-
     public String getLeaderNode() {
         return leaderNode;
+    }
+
+    public void setLeaderNode(String leaderNode) {
+        this.leaderNode = leaderNode;
     }
 }
