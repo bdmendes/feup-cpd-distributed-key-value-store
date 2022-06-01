@@ -24,7 +24,7 @@ public class ClusterMap {
         return new HashSet<>(clusterNodes.values());
     }
 
-    public synchronized void put(Node node) {
+    public void put(Node node) {
         clusterNodes.put(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)), node);
         this.writeToFile();
     }
@@ -33,7 +33,7 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)));
     }
 
-    public synchronized void removeHash(String hash) {
+    public void removeHash(String hash) {
         clusterNodes.remove(hash);
         this.writeToFile();
     }
@@ -47,7 +47,7 @@ public class ClusterMap {
         return clusterNodes.get(hash);
     }
 
-    public synchronized void clear() {
+    public void clear() {
         clusterNodes.clear();
         this.writeToFile();
     }
@@ -82,7 +82,7 @@ public class ClusterMap {
         return clusterNodes.values().iterator().next();
     }
 
-    private void readFromFile() {
+    private synchronized void readFromFile() {
         if (filePath == null) {
             return;
         }
@@ -101,7 +101,7 @@ public class ClusterMap {
         scanner.close();
     }
 
-    private void writeToFile() {
+    private synchronized void writeToFile() {
         if (filePath == null) {
             return;
         }
@@ -117,7 +117,22 @@ public class ClusterMap {
         }
     }
 
-    public List<Node> getReplicationNodes(Node firstNode, int replicationFactor) {
+    public List<Node> getNodesResponsibleForHash(String hash, int numberOfSuccessors) {
+        return this.getNodeSuccessors(hash, numberOfSuccessors);
+    }
+
+    public synchronized List<Node> getNodeSuccessors(String hash, int numberOfSuccessors) {
+        List<Node> successors = new ArrayList<>();
+        Node firstNode = this.getNodeSuccessor(hash);
+        if (firstNode == null) {
+            return successors;
+        }
+        successors.add(firstNode);
+        successors.addAll(this.getReplicationNodes(firstNode, numberOfSuccessors - 1));
+        return successors;
+    }
+
+    public synchronized List<Node> getReplicationNodes(Node firstNode, int replicationFactor) {
         List<Node> nodes = new ArrayList<>();
 
         Node currentNode = this.getNodeSuccessor(firstNode);

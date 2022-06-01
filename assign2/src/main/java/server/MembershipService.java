@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MembershipService implements MembershipRMI {
+    public static final int REPLICATION_FACTOR = 3;
     public final Object joinLeaveLock = new Object();
     private final StorageService storageService;
     private final MembershipCounter nodeMembershipCounter;

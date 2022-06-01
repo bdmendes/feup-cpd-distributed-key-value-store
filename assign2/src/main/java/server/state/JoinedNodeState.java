@@ -9,6 +9,7 @@ import utils.MembershipLog;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -43,148 +44,77 @@ public class JoinedNodeState extends NodeState {
 
     @Override
     public void processGet(GetMessage getMessage, Socket clientSocket) {
-        /*if (!membershipService.isJoined()) {
-            this.sendErrorResponse(new GetReply(), StatusCode.NODE_NOT_JOINED, getMessage.getKey(), clientSocket);
-            return;
-        }
+        List<Node> responsibleNodes = this.membershipService.getClusterMap()
+                .getNodesResponsibleForHash(getMessage.getKey(), MembershipService.REPLICATION_FACTOR);
 
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
-        if (responsibleNode == null) {
-            this.sendErrorResponse(new GetReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, getMessage.getKey(), clientSocket);
-            return;
-        }
-
-        if (!responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            try {
-                GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNodeWithReply(responsibleNode, getMessage);
-                if (!message.getStatusCode().equals(StatusCode.OK)) {
-                    // TODO: ASSIGN THIS STUFF TO THAT NODE
-                    // OTHER NODE FINDS BC IS MORE UPDATED
-                    throw new RuntimeException();
-                }
-                CommunicationUtils.sendMessage(message, clientSocket);
+        for (Node node : responsibleNodes) {
+            if (node.id().equals(this.storageService.getNode().id())
+                    && this.storageService.getHashes().contains(getMessage.getKey())) {
+                replyValueFromStore(clientSocket, getMessage.getKey());
                 return;
-            } catch (RuntimeException e) {
-                System.out.println("Failed to GET from original node");
-                List<Node> replicationNodes = this.membershipService.getClusterMap().getReplicationNodes(responsibleNode, 3);
-                for (Node node: replicationNodes) {
-                    System.out.println("Dispatching GET replication request for hash " + getMessage.getKey() + " to node " + node);
-                    GetRelayMessage getRelayMessage = new GetRelayMessage();
-                    getRelayMessage.setKey(getMessage.getKey());
-                    getRelayMessage.setTarget(node.id());
-
-                    try {
-                        GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNodeWithReply(node, getRelayMessage);
-                        if (!message.getStatusCode().equals(StatusCode.OK)) {
-                            continue;
-                        }
-                        System.out.println("Successfully GET from replicated node " + node);
-
-                        CommunicationUtils.sendMessage(message, clientSocket);
-                        return;
-                    } catch (Exception ignore) {
+            } else {
+                GetRelayMessage getRelayMessage = new GetRelayMessage();
+                getRelayMessage.setKey(getMessage.getKey());
+                getRelayMessage.setTarget(node.id());
+                try {
+                    GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNode(node, getRelayMessage, null);
+                    if (message == null) {
+                        this.membershipService.removeUnavailableNode(node);
+                        continue;
                     }
+                    if (!message.getStatusCode().equals(StatusCode.OK)) {
+                        continue;
+                    }
+                    System.out.println("Successfully GET from replicated node " + node);
+                    CommunicationUtils.sendMessage(message, clientSocket);
+                    return;
+                } catch (Exception ignored) {
                 }
             }
-
-            this.sendErrorResponse(new GetReply(), StatusCode.FILE_NOT_FOUND, getMessage.getKey(), clientSocket);
-            return;
         }
 
-        replyValueFromStore(clientSocket, getMessage.getKey());*/
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
-        if (responsibleNode == null) {
-            CommunicationUtils.sendErrorResponse(new GetReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, getMessage.getKey(), clientSocket);
-            return;
-        }
-
-        // TODO: Handle replication
-        if (this.membershipService.getStorageService().getHashes().contains(getMessage.getKey())
-                || responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            GetReply response = new GetReply();
-            response.setKey(getMessage.getKey());
-            try {
-                byte[] value = membershipService.getStorageService().get(getMessage.getKey());
-                response.setValue(value);
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.FILE_NOT_FOUND);
-            }
-            System.out.println("Getting hash " + getMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
-            System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, getMessage, clientSocket) == null) {
-                this.membershipService.removeUnavailableNode(responsibleNode);
-                this.sendNodeDownMessage(new GetReply(), getMessage.getKey(), clientSocket);
-            }
-        }
+        CommunicationUtils.sendErrorResponse(new GetReply(), StatusCode.FILE_NOT_FOUND, getMessage.getKey(), clientSocket);
     }
 
     @Override
     public void processPut(PutMessage putMessage, Socket clientSocket) {
-        /*       if (!membershipService.isJoined()) {
-            this.sendErrorResponse(new PutReply(), StatusCode.NODE_NOT_JOINED, putMessage.getKey(), clientSocket);
-            return;
-        }
+        List<Node> responsibleNodes = this.membershipService.getClusterMap()
+                .getNodesResponsibleForHash(putMessage.getKey(), MembershipService.REPLICATION_FACTOR);
 
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
-        if (responsibleNode == null) {
-            this.sendErrorResponse(new PutReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, putMessage.getKey(), clientSocket);
-            return;
-        }
+        PutRelayMessage putRelayMessage = new PutRelayMessage();
+        putRelayMessage.addValue(putMessage.getKey(), putMessage.getValue());
 
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            PutReply response = new PutReply();
-            response.setKey(putMessage.getKey());
-            try {
-                membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.ERROR);
-            }
-            System.out.println("Putting hash " + putMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-
-            List<Node> replicationNodes = this.membershipService.getClusterMap().getReplicationNodes(responsibleNode, 3);
-            for (Node node: replicationNodes) {
-                System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to node " + node);
-                PutRelayMessage putRelayMessage = new PutRelayMessage();
-                putRelayMessage.setKey(putMessage.getKey());
-                putRelayMessage.setValue(putMessage.getValue());
-                putRelayMessage.setTarget(node.id());
-
-                CommunicationUtils.dispatchMessageToNodeWithoutReply(node, putRelayMessage);
-            }
-        } else {
-            System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            CommunicationUtils.dispatchMessageToNode(responsibleNode, message, clientSocket);
-        }*/
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
-        if (responsibleNode == null) {
-            CommunicationUtils.sendErrorResponse(new PutReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, putMessage.getKey(), clientSocket);
-            return;
-        }
-
-        // TODO: Handle replication
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            PutReply response = new PutReply();
-            response.setKey(putMessage.getKey());
-            try {
-                membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.ERROR);
-            }
-            System.out.println("Putting hash " + putMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
-            System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, putMessage, clientSocket) == null) {
-                // TODO: put on down node successor
-                this.membershipService.removeUnavailableNode(responsibleNode);
-                this.sendNodeDownMessage(new PutReply(), putMessage.getKey(), clientSocket);
+        boolean sentResponse = false;
+        for (Node node : responsibleNodes) {
+            if (node.id().equals(this.storageService.getNode().id())) {
+                PutReply response = new PutReply();
+                response.setKey(putMessage.getKey());
+                try {
+                    membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
+                    response.setStatusCode(StatusCode.OK);
+                } catch (IOException e) {
+                    response.setStatusCode(StatusCode.ERROR);
+                }
+                System.out.println("Putting hash " + putMessage.getKey());
+                if (!sentResponse) {
+                    CommunicationUtils.sendMessage(response, clientSocket);
+                    sentResponse = true;
+                }
+            } else {
+                System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to " + node);
+                PutRelayReply putRelayReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putRelayMessage, null);
+                if (putRelayReply == null) {
+                    // TODO: calculate new node to replicate
+                    this.membershipService.removeUnavailableNode(node);
+                    continue;
+                }
+                if (!putRelayReply.getStatusCode().equals(StatusCode.OK)) {
+                    // TODO: calculate new node to replicate
+                }
+                if (!sentResponse) {
+                    CommunicationUtils.sendMessage(putRelayReply, clientSocket);
+                    sentResponse = true;
+                }
             }
         }
     }
