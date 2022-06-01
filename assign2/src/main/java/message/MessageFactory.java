@@ -12,6 +12,7 @@ public class MessageFactory {
         return switch (type) {
             case PUT -> new PutMessage(headers, body);
             case PUT_RELAY -> new PutRelayMessage(headers, body);
+            case PUT_RELAY_REPLY -> new PutRelayReply(headers);
             case PUT_REPLY -> new PutReply(headers);
             case GET -> new GetMessage(headers);
             case GET_RELAY -> new GetRelayMessage(headers);
@@ -22,7 +23,6 @@ public class MessageFactory {
             case MEMBERSHIP -> new MembershipMessage(headers, body);
             case ELECTION -> new ElectionMessage(headers, body);
             case LEADER -> new LeaderMessage(headers);
-            case PUT_RELAY_REPLY -> new PutRelayReply(headers);
         };
     }
 }

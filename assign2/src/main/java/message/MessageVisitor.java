@@ -51,12 +51,10 @@ public interface MessageVisitor {
     }
 
     default void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {
-    }
 
-    ;
+    }
 
     default void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {
-    }
 
-    ;
+    }
 }

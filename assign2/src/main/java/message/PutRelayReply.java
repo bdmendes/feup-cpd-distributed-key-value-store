@@ -1,40 +1,43 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
-public class PutRelayReply extends ReplyKeyMessage {
-    private String key;
+public class PutRelayReply extends ReplyMessage {
+    final List<String> successfulHashes;
+
     public PutRelayReply(String headers) {
         Map<String, String> fields = decodeFields(headers);
-        this.key = fields.get("key");
+        String hashes = fields.get("hashes");
+        successfulHashes = List.of(hashes.split(","));
     }
 
     public PutRelayReply() {
-
+        successfulHashes = new ArrayList<>();
     }
 
-    public String getKey() {
-        return key;
+    public void reportSuccess(String hash) {
+        successfulHashes.add(hash);
     }
 
-    public void setKey(String key) {
-        this.key = key;
+    public List<String> getSuccessfulHashes() {
+        return successfulHashes;
     }
 
     @Override
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
-        fields.put("key", key);
+        fields.put("hashes", String.join(",", successfulHashes));
         byte[] body = new byte[0];
 
         return encodeWithFields(MessageType.PUT_RELAY_REPLY, fields, body);
     }
 
     @Override
-    public void accept(MessageVisitor visitor, Socket socket) throws IOException {
+    public void accept(MessageVisitor visitor, Socket socket) {
         visitor.processPutRelayReply(this, socket);
     }
 }

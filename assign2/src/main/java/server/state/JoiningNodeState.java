@@ -1,6 +1,5 @@
 package server.state;
 
-import message.PutMessage;
 import message.PutRelayMessage;
 import server.MembershipService;
 
@@ -13,10 +12,7 @@ public class JoiningNodeState extends InitNodeState {
 
     @Override
     public void processPutRelay(PutRelayMessage putRelayMessage, Socket socket) {
-        PutMessage putMessage = new PutMessage();
-        putMessage.setKey(putRelayMessage.getKey());
-        putMessage.setValue(putRelayMessage.getValue());
-        CommonState.processLocalPut(new PutMessage(), socket, this.membershipService);
+        CommonState.processPutRelay(putRelayMessage, socket, this.membershipService);
     }
 
     @Override
@@ -24,4 +20,3 @@ public class JoiningNodeState extends InitNodeState {
         return true; // TODO: return IN_PROGRESS
     }
 }
-

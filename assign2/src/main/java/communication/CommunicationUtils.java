@@ -40,7 +40,7 @@ public class CommunicationUtils {
         }
     }
 
-    public static boolean dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
+    public static Message dispatchMessageToNode(Node node, Message message, Socket clientSocket) {
         for (int i = 0; i < MAX_TRIES; i++) {
             try (Socket responsibleNodeSocket = new Socket(node.id(), node.port())) {
                 sendMessage(message, responsibleNodeSocket);
@@ -49,7 +49,7 @@ public class CommunicationUtils {
                     System.out.println("Sending dispatched request back to the client");
                     sendMessage(replyMessage, clientSocket);
                 }
-                return true;
+                return replyMessage;
             } catch (IOException | RuntimeException ignored) {
                 try {
                     Thread.sleep(DELAY_MS);
@@ -58,7 +58,7 @@ public class CommunicationUtils {
                 }
             }
         }
-        return false;
+        return null;
     }
 
     public static Message dispatchMessageToNodeWithReply(Node node, Message message) {

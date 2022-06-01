@@ -1,6 +1,5 @@
 package server;
 
-import communication.IPAddress;
 import message.MembershipMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,7 +90,7 @@ public class MembershipServiceTest {
     }
 
     @Test
-    void testElderyRemoval() throws IOException {
+    void testElderlyRemoval() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService service = new MembershipService(storageService);
 

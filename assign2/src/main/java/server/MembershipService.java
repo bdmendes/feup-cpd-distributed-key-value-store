@@ -6,6 +6,7 @@ import communication.MulticastHandler;
 import message.JoinMessage;
 import message.Message;
 import message.PutRelayMessage;
+import message.PutRelayReply;
 import server.state.InitNodeState;
 import server.state.NodeState;
 import server.tasks.ElectionTask;
@@ -46,7 +47,7 @@ public class MembershipService implements MembershipRMI {
         this.messageReceiverTask = null;
     }
 
-    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) throws IOException {
+    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
@@ -179,26 +180,47 @@ public class MembershipService implements MembershipRMI {
         String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
         String thisNodeHash = StoreUtils.sha256(this.getStorageService()
                 .getNode().id().getBytes(StandardCharsets.UTF_8));
+        PutRelayMessage putMessage = new PutRelayMessage();
+
         for (String hash : this.getStorageService().getHashes()) {
-            boolean mustTransferHash = joiningNodeHash.compareTo(hash) >= 0
-                    || (hash.compareTo(thisNodeHash) >= 0 && joiningNodeHash.compareTo(thisNodeHash) < 0);
+            boolean hashIsLessThanJoiningNode = hash.compareTo(joiningNodeHash) <= 0;
+            boolean hashIsHigherThanThisNode = hash.compareTo(thisNodeHash) >= 0;
+            boolean mustTransferHash =
+                    joiningNodeHash.compareTo(thisNodeHash) < 0
+                            ? hashIsLessThanJoiningNode || hashIsHigherThanThisNode
+                            : hashIsLessThanJoiningNode && hashIsHigherThanThisNode;
+
             if (!mustTransferHash) {
                 continue;
             }
-            PutRelayMessage putMessage = new PutRelayMessage();
+            System.out.println("Transferring key " + hash + " to joining node " + joiningNode.id());
+
             try {
                 File file = new File(this.getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                putMessage.setKey(hash);
-                putMessage.setValue(bytes);
+                putMessage.addValue(hash, bytes);
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            if (!CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage, null)) {
-                this.removeUnavailableNode(joiningNode);
+        }
+
+        if (putMessage.getValues().isEmpty()) {
+            return;
+        }
+        transferKeysAndDeleteLocals(joiningNode, putMessage);
+    }
+
+    private void transferKeysAndDeleteLocals(Node joiningNode, PutRelayMessage putMessage) {
+        try {
+            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage, null);
+            if (putReply == null) {
                 return;
             }
-            this.getStorageService().delete(hash); // TODO: do not remove while iterating
+            for (String hash : putReply.getSuccessfulHashes()) {
+                this.getStorageService().delete(hash);
+            }
+        } catch (ClassCastException e) {
+            e.printStackTrace();
         }
     }
 
@@ -209,22 +231,21 @@ public class MembershipService implements MembershipRMI {
             return;
         }
 
+        PutRelayMessage putMessage = new PutRelayMessage();
         for (String hash : getStorageService().getHashes()) {
-            PutRelayMessage putMessage = new PutRelayMessage();
             try {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                putMessage.setKey(hash);
-                putMessage.setValue(bytes);
+                putMessage.addValue(hash, bytes);
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
-            if (!CommunicationUtils.dispatchMessageToNode(successorNode, putMessage, null)) {
-                this.removeUnavailableNode(successorNode);
-                return;
-            }
-            this.getStorageService().delete(hash); // TODO: do not remove while iterating
         }
+
+        if (putMessage.getValues().size() == 0) {
+            return;
+        }
+        transferKeysAndDeleteLocals(successorNode, putMessage);
     }
 
     public void removeUnavailableNode(Node node) {

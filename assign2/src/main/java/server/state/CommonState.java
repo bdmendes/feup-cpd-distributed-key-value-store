@@ -1,7 +1,10 @@
 package server.state;
 
 import communication.CommunicationUtils;
-import message.*;
+import message.MembershipMessage;
+import message.PutRelayMessage;
+import message.PutRelayReply;
+import message.StatusCode;
 import server.MembershipService;
 import server.Node;
 
@@ -47,16 +50,26 @@ public class CommonState {
         System.out.println("Received membership message " + membershipService.getMembershipLog().getMap().entrySet());
     }
 
-    public static void processLocalPut(PutMessage putMessage, Socket clientSocket, MembershipService membershipService) {
-        PutReply response = new PutReply();
-        response.setKey(putMessage.getKey());
+    public static void processPutRelay(PutRelayMessage putMessage, Socket clientSocket, MembershipService membershipService) {
+        System.out.println("Received put relay message ");
+        PutRelayReply response = new PutRelayReply();
+
         try {
-            membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
+            for (Map.Entry<String, byte[]> entry : putMessage.getValues().entrySet()) {
+                String key = entry.getKey();
+                byte[] value = entry.getValue();
+                System.out.println("Putting hash " + key);
+
+                membershipService.getStorageService().put(key, value);
+                response.reportSuccess(key);
+            }
+
             response.setStatusCode(StatusCode.OK);
         } catch (IOException e) {
+            System.out.println("Error storing file");
+
             response.setStatusCode(StatusCode.ERROR);
         }
-        System.out.println("Putting hash " + putMessage.getKey());
         CommunicationUtils.sendMessage(response, clientSocket);
     }
 }
