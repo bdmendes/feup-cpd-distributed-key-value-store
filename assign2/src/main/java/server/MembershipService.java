@@ -191,8 +191,10 @@ public class MembershipService implements MembershipRMI {
                     joiningNodeHash.compareTo(thisNodeHash) < 0
                             ? hashIsLessThanJoiningNode || hashIsHigherThanThisNode
                             : hashIsLessThanJoiningNode && hashIsHigherThanThisNode;
+            boolean mustReplicateHash =
+                    clusterMap.getNodesResponsibleForHash(hash, REPLICATION_FACTOR + 1).size() <= REPLICATION_FACTOR;
 
-            if (!mustTransferHash) {
+            if (!mustTransferHash && !mustReplicateHash) {
                 continue;
             }
             System.out.println("Transferring key " + hash + " to joining node " + joiningNode.id());
