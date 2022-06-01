@@ -1,13 +1,11 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
 public class GetReply extends ReplyKeyMessage {
-    private String key;
     private byte[] value;
 
     public GetReply() {
@@ -16,7 +14,7 @@ public class GetReply extends ReplyKeyMessage {
 
     public GetReply(String headers, byte[] body) {
         Map<String, String> fields = decodeFields(headers);
-        key = fields.get("key");
+        setKey(fields.get("key"));
         value = body;
     }
 
@@ -28,18 +26,10 @@ public class GetReply extends ReplyKeyMessage {
         this.value = value;
     }
 
-    public String getKey() {
-        return key;
-    }
-
-    public void setKey(String key) {
-        this.key = key;
-    }
-
     @Override
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
-        fields.put("key", key);
+        fields.put("key", getKey());
 
         byte[] body;
         body = Objects.requireNonNullElseGet(value, () -> new byte[0]);
@@ -48,7 +38,7 @@ public class GetReply extends ReplyKeyMessage {
     }
 
     @Override
-    public void accept(MessageVisitor visitor, Socket socket) throws IOException {
+    public void accept(MessageVisitor visitor, Socket socket) {
         visitor.processGetReply(this, socket);
     }
 }

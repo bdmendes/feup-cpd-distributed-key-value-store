@@ -12,12 +12,15 @@ public class MessageFactory {
         return switch (type) {
             case PUT -> new PutMessage(headers, body);
             case PUT_RELAY -> new PutRelayMessage(headers, body);
-            case PUT_RELAY_REPLY ->  new PutRelayReply(headers);
+            case PUT_RELAY_REPLY -> new PutRelayReply(headers);
             case PUT_REPLY -> new PutReply(headers);
             case GET -> new GetMessage(headers);
+            case GET_RELAY -> new GetRelayMessage(headers);
             case GET_REPLY -> new GetReply(headers, body);
             case DELETE -> new DeleteMessage(headers);
             case DELETE_REPLY -> new DeleteReply(headers);
+            case DELETE_RELAY -> new DeleteRelayMessage(headers);
+            case DELETE_RELAY_REPLY -> new DeleteRelayReply(headers);
             case JOIN -> new JoinMessage(headers);
             case MEMBERSHIP -> new MembershipMessage(headers, body);
             case ELECTION -> new ElectionMessage(headers, body);

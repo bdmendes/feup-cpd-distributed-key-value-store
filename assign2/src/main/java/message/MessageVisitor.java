@@ -12,6 +12,14 @@ public interface MessageVisitor {
 
     }
 
+    default void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket socket) {
+
+    }
+
+    default void processDeleteRelayReply(DeleteRelayReply deleteRelayReply, Socket socket) {
+
+    }
+
     default void processGet(GetMessage getMessage, Socket socket) {
 
     }
@@ -36,10 +44,6 @@ public interface MessageVisitor {
 
     }
 
-    default void processPutRelayReply(PutRelayReply putReply, Socket socket) {
-
-    }
-
     default void processDeleteReply(DeleteReply deleteReply, Socket socket) {
 
     }
@@ -54,4 +58,11 @@ public interface MessageVisitor {
 
     }
 
+    default void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {
+
+    }
+
+    default void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {
+
+    }
 }

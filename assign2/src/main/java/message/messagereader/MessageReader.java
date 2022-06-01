@@ -7,7 +7,7 @@ import java.nio.CharBuffer;
 import java.nio.charset.StandardCharsets;
 
 public class MessageReader {
-    protected StringBuilder header;
+    protected final StringBuilder header;
     protected int length;
     protected char[] body;
     private MessageReaderState state;

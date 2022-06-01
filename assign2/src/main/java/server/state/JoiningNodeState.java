@@ -20,4 +20,3 @@ public class JoiningNodeState extends InitNodeState {
         return true; // TODO: return IN_PROGRESS
     }
 }
-

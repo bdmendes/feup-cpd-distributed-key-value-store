@@ -24,7 +24,7 @@ public class ClusterMap {
         return new HashSet<>(clusterNodes.values());
     }
 
-    public synchronized void put(Node node) {
+    public void put(Node node) {
         clusterNodes.put(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)), node);
         this.writeToFile();
     }
@@ -33,7 +33,7 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)));
     }
 
-    public synchronized void removeHash(String hash) {
+    public void removeHash(String hash) {
         clusterNodes.remove(hash);
         this.writeToFile();
     }
@@ -42,7 +42,12 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(id.getBytes(StandardCharsets.UTF_8)));
     }
 
-    public synchronized void clear() {
+    public Node getNodeFromId(String id) {
+        String hash = StoreUtils.sha256(id.getBytes(StandardCharsets.UTF_8));
+        return clusterNodes.get(hash);
+    }
+
+    public void clear() {
         clusterNodes.clear();
         this.writeToFile();
     }
@@ -50,6 +55,11 @@ public class ClusterMap {
     public Node getNodeSuccessor(Node node) {
         String nodeHash = StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8));
         return this.getNodeSuccessor(nodeHash);
+    }
+
+    public List<Node> getNodeSuccessors(Node node, int replicationFactor) {
+        String nodeHash = StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8));
+        return this.getNodeSuccessors(nodeHash, replicationFactor);
     }
 
     public Node getNodeSuccessorById(String nodeId) {
@@ -77,7 +87,7 @@ public class ClusterMap {
         return clusterNodes.values().iterator().next();
     }
 
-    private void readFromFile() {
+    private synchronized void readFromFile() {
         if (filePath == null) {
             return;
         }
@@ -96,7 +106,7 @@ public class ClusterMap {
         scanner.close();
     }
 
-    private void writeToFile() {
+    private synchronized void writeToFile() {
         if (filePath == null) {
             return;
         }
@@ -111,4 +121,35 @@ public class ClusterMap {
             e.printStackTrace();
         }
     }
+
+    public List<Node> getNodesResponsibleForHash(String hash, int numberOfSuccessors) {
+        return this.getNodeSuccessors(hash, numberOfSuccessors);
+    }
+
+    public synchronized List<Node> getNodeSuccessors(String hash, int numberOfSuccessors) {
+        List<Node> successors = new ArrayList<>();
+        Node firstNode = this.getNodeSuccessor(hash);
+        if (firstNode == null) {
+            return successors;
+        }
+        successors.add(firstNode);
+        successors.addAll(this.getReplicationNodes(firstNode, numberOfSuccessors));
+        return successors;
+    }
+
+    public synchronized List<Node> getReplicationNodes(Node firstNode, int replicationFactor) {
+        List<Node> nodes = new ArrayList<>();
+
+        Node currentNode = this.getNodeSuccessor(firstNode);
+
+        while (replicationFactor > 1 && !currentNode.equals(firstNode)) {
+            nodes.add(currentNode);
+            currentNode = this.getNodeSuccessor(currentNode);
+
+            replicationFactor--;
+        }
+
+        return nodes;
+    }
+
 }

@@ -6,16 +6,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PutRelayReply extends ReplyMessage {
+public class DeleteRelayReply extends ReplyMessage {
     final List<String> successfulHashes;
 
-    public PutRelayReply(String headers) {
+    public DeleteRelayReply(String headers) {
         Map<String, String> fields = decodeFields(headers);
         String hashes = fields.get("hashes");
         successfulHashes = List.of(hashes.split(","));
     }
 
-    public PutRelayReply() {
+    public DeleteRelayReply() {
         successfulHashes = new ArrayList<>();
     }
 
@@ -33,11 +33,11 @@ public class PutRelayReply extends ReplyMessage {
         fields.put("hashes", String.join(",", successfulHashes));
         byte[] body = new byte[0];
 
-        return encodeWithFields(MessageType.PUT_RELAY_REPLY, fields, body);
+        return encodeWithFields(MessageType.DELETE_RELAY_REPLY, fields, body);
     }
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) {
-        visitor.processPutRelayReply(this, socket);
+        visitor.processDeleteRelayReply(this, socket);
     }
 }

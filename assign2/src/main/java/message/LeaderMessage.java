@@ -1,6 +1,5 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +26,7 @@ public class LeaderMessage extends Message {
     }
 
     @Override
-    public void accept(MessageVisitor visitor, Socket socket) throws IOException {
+    public void accept(MessageVisitor visitor, Socket socket) {
         visitor.processLeader(this, socket);
     }
 

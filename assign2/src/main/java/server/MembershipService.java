@@ -20,6 +20,7 @@ import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -28,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MembershipService implements MembershipRMI {
+    public static final int REPLICATION_FACTOR = 3;
     public final Object joinLeaveLock = new Object();
     private final StorageService storageService;
     private final MembershipCounter nodeMembershipCounter;
@@ -49,7 +51,7 @@ public class MembershipService implements MembershipRMI {
         this.messageReceiverTask = null;
     }
 
-    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) throws IOException {
+    public MembershipService(StorageService storageService, IPAddress ipMulticastGroup, ServerSocket socket) {
         this.storageService = storageService;
         this.ipMulticastGroup = ipMulticastGroup;
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
@@ -168,16 +170,12 @@ public class MembershipService implements MembershipRMI {
 
     public void sendToNextAvailableNode(Message message) {
         Node currentNode = getStorageService().getNode();
-        Node nextNode;
-        boolean notSent = true;
-
-        while (notSent) {
-            nextNode = getClusterMap().getNodeSuccessor(currentNode);
-            try {
-                CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message);
-                notSent = false;
-            } catch (RuntimeException e) {
+        while (true) {
+            Node nextNode = getClusterMap().getNodeSuccessor(currentNode);
+            if (!CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message)) {
                 currentNode = nextNode;
+            } else {
+                return;
             }
         }
     }
@@ -188,7 +186,7 @@ public class MembershipService implements MembershipRMI {
         }
 
         try {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage);
+            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage, null);
 
             return putReply.getSuccessfulHashes();
         } catch (ClassCastException e) {
@@ -206,11 +204,12 @@ public class MembershipService implements MembershipRMI {
         List<String> successfulHashes = new ArrayList<>();
 
         for (String hash : this.getStorageService().getHashes()) {
-            boolean mustTransferHash;
-
-            if(joiningNodeHash.compareTo(thisNodeHash) < 0 ) {
-                mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 || hash.compareTo(thisNodeHash) > 0;
-            } else mustTransferHash = hash.compareTo(joiningNodeHash) <= 0 && hash.compareTo(thisNodeHash) > 0;
+            boolean hashIsLessThanJoiningNode = hash.compareTo(joiningNodeHash) <= 0;
+            boolean hashIsHigherThanThisNode = hash.compareTo(thisNodeHash) >= 0;
+            boolean mustTransferHash =
+                    joiningNodeHash.compareTo(thisNodeHash) < 0
+                            ? hashIsLessThanJoiningNode || hashIsHigherThanThisNode
+                            : hashIsLessThanJoiningNode && hashIsHigherThanThisNode;
 
             if (!mustTransferHash) {
                 continue;
@@ -232,34 +231,77 @@ public class MembershipService implements MembershipRMI {
         }
 
         successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
-        successfulHashes.forEach(hash -> this.getStorageService().delete(hash));
-    }
 
-    public void transferAllMyKeysToMySuccessor() {
-        Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
-        if (successorNode.equals(this.storageService.getNode())) {
-            System.out.println("No successor node found");
-            return;
+        for (String hash : successfulHashes) {
+            if (clusterMap.getNodesResponsibleForHash(hash, REPLICATION_FACTOR + 1).size() == REPLICATION_FACTOR + 1) {
+                this.getStorageService().delete(hash);
+            }
         }
+    }
+    public void transferAllMyKeysToNewSuccessors() {
+        Map<String, PutRelayMessage> putMessages = new HashMap<>();
         List<String> successfulHashes = new ArrayList<>();
 
-        PutRelayMessage putMessage = new PutRelayMessage();
         for (String hash : getStorageService().getHashes()) {
             try {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                boolean full = putMessage.addValue(hash, bytes);
 
-                if (full) {
-                    successfulHashes.addAll(sendPutRelayMessageToNode(successorNode, putMessage));
-                    putMessage = new PutRelayMessage();
+                List<Node> responsibleNodes = clusterMap.getNodesResponsibleForHash(hash, MembershipService.REPLICATION_FACTOR + 1);
+                for (Node node : responsibleNodes) {
+                    if(node.id().equals(getStorageService().getNode().id())) {
+                        continue;
+                    }
+
+                    PutRelayMessage putRelayMessage =
+                            putMessages.containsKey(node.id()) ?
+                            putMessages.get(node.id()) : new PutRelayMessage();
+
+                    boolean full = putRelayMessage.addValue(hash, bytes);
+
+                    if(full) {
+                        PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(
+                                node,
+                                putRelayMessage,
+                                null);
+                        putRelayMessage = new PutRelayMessage();
+                        if (putReply == null) {
+                            // TODO: calculate replication again
+                            continue;
+                        }
+                        successfulHashes.addAll(putReply.getSuccessfulHashes());
+                    }
+
+                    putMessages.put(node.id(), putRelayMessage);
                 }
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
         }
 
-        successfulHashes.addAll(sendPutRelayMessageToNode(successorNode, putMessage));
-        successfulHashes.forEach(hash -> this.getStorageService().delete(hash));
+        for (Map.Entry<String, PutRelayMessage> entry : putMessages.entrySet()) {
+            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(
+                    this.clusterMap.getNodeFromId(entry.getKey()),
+                    entry.getValue(),
+                    null);
+            if (putReply == null) {
+                // TODO: calculate replication again
+                continue;
+            }
+            successfulHashes.addAll(putReply.getSuccessfulHashes());
+        }
+
+        for (String deletedHash : successfulHashes) {
+            this.getStorageService().delete(deletedHash);
+        }
+    }
+
+    public void removeUnavailableNode(Node node) {
+        Integer nodeCounter = this.membershipLog.get(node.id());
+        if (nodeCounter != null) {
+            this.membershipLog.put(node.id(), nodeCounter + 1);
+        }
+        this.clusterMap.remove(node);
+        System.out.println(node + " is unavailable. Removed from cluster map");
     }
 }

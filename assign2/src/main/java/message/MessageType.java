@@ -10,5 +10,10 @@ public enum MessageType {
     DELETE,
     DELETE_REPLY,
     JOIN,
-    MEMBERSHIP, ELECTION, LEADER,
+    MEMBERSHIP,
+    ELECTION,
+    LEADER,
+    GET_RELAY,
+    DELETE_RELAY,
+    DELETE_RELAY_REPLY,
 }

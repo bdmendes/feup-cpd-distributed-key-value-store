@@ -1,6 +1,5 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -39,5 +38,5 @@ public abstract class Message {
 
     public abstract byte[] encode();
 
-    public abstract void accept(MessageVisitor visitor, Socket socket) throws IOException;
+    public abstract void accept(MessageVisitor visitor, Socket socket);
 }

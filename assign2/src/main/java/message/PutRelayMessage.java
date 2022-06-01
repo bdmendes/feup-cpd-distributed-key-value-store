@@ -1,9 +1,10 @@
 package message;
 
-import java.lang.reflect.Array;
 import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static message.MessageConstants.END_OF_LINE;
 
@@ -26,7 +27,7 @@ public class PutRelayMessage extends Message {
     /**
      * Finds the 0x0D 0x0A delimiter.
      *
-     * @param data The data to parse.
+     * @param data  The data to parse.
      * @param start The start index.
      * @return the index of the delimiter.
      */
@@ -59,7 +60,7 @@ public class PutRelayMessage extends Message {
         Map<String, Integer> lengthOfMessage = new LinkedHashMap<>(numValues);
         int start = 0;
 
-        for(int i = 0; i < numValues; i++) {
+        for (int i = 0; i < numValues; i++) {
             int end = findEndOfLine(data, start);
             String line = new String(data, start, end - start);
 
@@ -71,7 +72,7 @@ public class PutRelayMessage extends Message {
             start = end + 2;
         }
 
-        for(Map.Entry<String, Integer> entry : lengthOfMessage.entrySet()) {
+        for (Map.Entry<String, Integer> entry : lengthOfMessage.entrySet()) {
             String key = entry.getKey();
             int length = entry.getValue();
             byte[] value = Arrays.copyOfRange(data, start, start + length);
@@ -93,7 +94,6 @@ public class PutRelayMessage extends Message {
         return values.size() >= MAX_MESSAGES;
     }
 
-
     @Override
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
@@ -101,7 +101,7 @@ public class PutRelayMessage extends Message {
 
         StringBuilder builder = new StringBuilder();
 
-        for(Map.Entry<String, byte[]> entry : values.entrySet()) {
+        for (Map.Entry<String, byte[]> entry : values.entrySet()) {
             builder.append(entry.getKey()).append(" ").append(entry.getValue().length).append(END_OF_LINE);
         }
 
@@ -116,4 +116,5 @@ public class PutRelayMessage extends Message {
     public void accept(MessageVisitor visitor, Socket socket) {
         visitor.processPutRelay(this, socket);
     }
+
 }
