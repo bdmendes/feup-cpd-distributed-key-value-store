@@ -36,6 +36,12 @@ public class MembershipCounter {
         return c;
     }
 
+    public synchronized int decrementAndGet() {
+        int c = counter.decrementAndGet();
+        writeToFile();
+        return c;
+    }
+
     private void readFromFile() {
         if (filePath == null) {
             return;

@@ -24,7 +24,7 @@ public class ClusterMap {
         return new HashSet<>(clusterNodes.values());
     }
 
-    public void put(Node node) {
+    public synchronized void put(Node node) {
         clusterNodes.put(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)), node);
         this.writeToFile();
     }
@@ -33,7 +33,7 @@ public class ClusterMap {
         this.removeHash(StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8)));
     }
 
-    public void removeHash(String hash) {
+    public synchronized void removeHash(String hash) {
         clusterNodes.remove(hash);
         this.writeToFile();
     }

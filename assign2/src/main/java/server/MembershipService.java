@@ -137,12 +137,12 @@ public class MembershipService implements MembershipRMI {
     }
 
     @Override
-    public boolean join() {
+    public MembershipRMI.Status join() {
         return nodeState.join();
     }
 
     @Override
-    public boolean leave() {
+    public MembershipRMI.Status leave() {
         return nodeState.leave();
     }
 

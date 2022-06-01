@@ -120,7 +120,7 @@ public class TestClient {
             try {
                 Registry registry = LocateRegistry.getRegistry(nodeAccessPoint.getIp());
                 MembershipRMI stub = (MembershipRMI) registry.lookup(nodeAccessPoint.getObjectName());
-                boolean response = clientArgs.operation.equals("join") ? stub.join() : stub.leave();
+                MembershipRMI.Status response = clientArgs.operation.equals("join") ? stub.join() : stub.leave();
                 System.out.println("response: " + response);
             } catch (Exception e) {
                 System.err.println("RMI error: " + e);

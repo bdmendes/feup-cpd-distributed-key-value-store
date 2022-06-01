@@ -1,6 +1,7 @@
 package server.state;
 
 import message.PutRelayMessage;
+import server.MembershipRMI;
 import server.MembershipService;
 
 import java.net.Socket;
@@ -16,7 +17,7 @@ public class JoiningNodeState extends InitNodeState {
     }
 
     @Override
-    public boolean join() {
-        return true; // TODO: return IN_PROGRESS
+    public MembershipRMI.Status join() {
+        return MembershipRMI.Status.JOIN_IN_PROGRESS;
     }
 }
