@@ -113,7 +113,9 @@ public class JoinedNodeState extends NodeState {
                 if (!putRelayReply.getStatusCode().equals(StatusCode.OK)) {
                     continue;
                 }
-                response.setStatusCode(putRelayReply.getStatusCode());
+                if (response.getStatusCode() != StatusCode.OK) {
+                    response.setStatusCode(putRelayReply.getStatusCode());
+                }
             }
         }
 
@@ -145,10 +147,12 @@ public class JoinedNodeState extends NodeState {
             if (node.id().equals(this.storageService.getNode().id())) {
                 boolean deleted;
                 synchronized (storageService.getHashLock(deleteMessage.getKey())) {
-                    deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
+                    deleted = membershipService.getStorageService().delete(deleteMessage.getKey(), true);
                 }
                 System.out.println("Deleting hash " + deleteMessage.getKey());
-                response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
+                if (response.getStatusCode() != StatusCode.OK) {
+                    response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
+                }
             } else {
                 System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to " + node);
                 DeleteRelayReply deleteRelayReply = (DeleteRelayReply)
@@ -158,8 +162,9 @@ public class JoinedNodeState extends NodeState {
                     processDelete(deleteMessage, clientSocket);
                     return;
                 }
-                System.out.println("ola" + deleteRelayReply.getStatusCode());
-                response.setStatusCode(deleteRelayReply.getStatusCode());
+                if (response.getStatusCode() != StatusCode.OK) {
+                    response.setStatusCode(deleteRelayReply.getStatusCode());
+                }
             }
         }
 

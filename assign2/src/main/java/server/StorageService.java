@@ -41,16 +41,18 @@ public class StorageService {
         }
     }
 
-    public boolean delete(String key) {
+    public boolean delete(String key, boolean tombstone) {
         hashLocks.remove(key);
         File file = new File(getValueFilePath(key));
         boolean deletedFile = file.delete();
-        try (FileOutputStream fileWriter = new FileOutputStream(getTombstoneFilePath(key), false)) {
-            fileWriter.write(new byte[0]);
-        } catch (IOException e) {
-            deletedFile = false;
+        if (tombstone && deletedFile) {
+            try (FileOutputStream fileWriter = new FileOutputStream(getTombstoneFilePath(key), false)) {
+                fileWriter.write(new byte[0]);
+            } catch (IOException e) {
+                deletedFile = false;
+            }
+            tombstones.add(key);
         }
-        hashLocks.put(key, new Object());
         return deletedFile;
     }
 

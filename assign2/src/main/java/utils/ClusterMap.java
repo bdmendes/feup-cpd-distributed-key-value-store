@@ -47,7 +47,7 @@ public class ClusterMap {
         return clusterNodes.get(hash);
     }
 
-    public void clear() {
+    public synchronized void clear() {
         clusterNodes.clear();
         this.writeToFile();
     }
@@ -87,7 +87,7 @@ public class ClusterMap {
         return clusterNodes.values().iterator().next();
     }
 
-    private synchronized void readFromFile() {
+    private void readFromFile() {
         if (filePath == null) {
             return;
         }
@@ -106,7 +106,7 @@ public class ClusterMap {
         scanner.close();
     }
 
-    private synchronized void writeToFile() {
+    private void writeToFile() {
         if (filePath == null) {
             return;
         }

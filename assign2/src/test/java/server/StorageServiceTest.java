@@ -14,7 +14,7 @@ class StorageServiceTest {
     static void deleteTestAssets() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", 100));
         File directory = new File(storageService.getValueFilesDirectory());
-        if(directory.exists()){
+        if (directory.exists()) {
             File[] files = directory.listFiles();
             if (null != files) {
                 for (File file : files) {
@@ -40,7 +40,7 @@ class StorageServiceTest {
         StorageService storageService = new StorageService(new Node("-1", 100));
         storageService.put("key", new byte[]{1, 2, 3});
         assertTrue(new File(storageService.getValueFilePath("key")).exists());
-        storageService.delete("key");
+        storageService.delete("key", true);
         assertFalse(new File(storageService.getValueFilePath("key")).exists());
     }
 }

@@ -93,9 +93,8 @@ public class CommonState {
     public static void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket, MembershipService membershipService) {
         boolean deleted;
         synchronized (membershipService.getStorageService().getHashLock(deleteRelayMessage.getKey())) {
-            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey());
+            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey(), true);
         }
-        System.out.println("tenso" + deleted);
         System.out.println("Deleting hash " + deleteRelayMessage.getKey());
         DeleteRelayReply response = new DeleteRelayReply();
         response.reportSuccess(deleteRelayMessage.getKey());
