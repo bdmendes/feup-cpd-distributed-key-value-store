@@ -3,10 +3,7 @@ package server;
 import communication.CommunicationUtils;
 import communication.IPAddress;
 import communication.MulticastHandler;
-import message.JoinMessage;
-import message.Message;
-import message.PutRelayMessage;
-import message.PutRelayReply;
+import message.*;
 import server.state.InitNodeState;
 import server.state.NodeState;
 import server.tasks.ElectionTask;
@@ -199,6 +196,14 @@ public class MembershipService implements MembershipRMI {
         }
 
         return new ArrayList<>();
+    }
+
+    public void orderJoiningNodeToDeleteMyTombstones(Node joiningNode) {
+        for (String hash : storageService.getTombstones()) {
+            DeleteRelayMessage message = new DeleteRelayMessage();
+            message.setKey(hash);
+            CommunicationUtils.dispatchMessageToNode(joiningNode, message, null);
+        }
     }
 
     public void transferKeysToJoiningNode(Node joiningNode) {

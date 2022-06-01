@@ -1,10 +1,7 @@
 package server.state;
 
 import communication.CommunicationUtils;
-import message.MembershipMessage;
-import message.PutRelayMessage;
-import message.PutRelayReply;
-import message.StatusCode;
+import message.*;
 import server.MembershipService;
 import server.Node;
 
@@ -90,6 +87,19 @@ public class CommonState {
 
             response.setStatusCode(StatusCode.ERROR);
         }
+        CommunicationUtils.sendMessage(response, clientSocket);
+    }
+
+    public static void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket, MembershipService membershipService) {
+        boolean deleted;
+        synchronized (membershipService.getStorageService().getHashLock(deleteRelayMessage.getKey())) {
+            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey());
+        }
+        System.out.println("tenso" + deleted);
+        System.out.println("Deleting hash " + deleteRelayMessage.getKey());
+        DeleteRelayReply response = new DeleteRelayReply();
+        response.reportSuccess(deleteRelayMessage.getKey());
+        response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
         CommunicationUtils.sendMessage(response, clientSocket);
     }
 }

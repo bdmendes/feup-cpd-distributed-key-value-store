@@ -127,16 +127,7 @@ public class JoinedNodeState extends NodeState {
 
     @Override
     public void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket) {
-        boolean deleted;
-        synchronized (storageService.getHashLock(deleteRelayMessage.getKey())) {
-            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey());
-        }
-        System.out.println("tenso" + deleted);
-        System.out.println("Deleting hash " + deleteRelayMessage.getKey());
-        DeleteRelayReply response = new DeleteRelayReply();
-        response.reportSuccess(deleteRelayMessage.getKey());
-        response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
-        CommunicationUtils.sendMessage(response, clientSocket);
+        CommonState.processDeleteRelay(deleteRelayMessage, clientSocket, this.membershipService);
     }
 
     @Override
@@ -217,7 +208,10 @@ public class JoinedNodeState extends NodeState {
             );
 
             System.out.println("sent membership message to " + joinMessage.getNodeId());
+
             this.membershipService.transferKeysToJoiningNode(newNode);
+            this.membershipService.orderJoiningNodeToDeleteMyTombstones(newNode);
+
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
