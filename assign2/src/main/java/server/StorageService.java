@@ -92,6 +92,19 @@ public class StorageService {
         return hashLocks.getOrDefault(hash, new Object());
     }
 
+    public synchronized void deleteTombstones() {
+        tombstones.clear();
+        File directory = new File(getTombstonesDirectory());
+        if (directory.exists()) {
+            File[] files = directory.listFiles();
+            if (null != files) {
+                for (File file : files) {
+                    file.delete();
+                }
+            }
+        }
+    }
+
     private void readHashesFromFilesDirectory() {
         File directory = new File(this.getValueFilesDirectory());
         File[] files = directory.listFiles();

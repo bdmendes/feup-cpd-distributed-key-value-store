@@ -232,9 +232,9 @@ public class MembershipService implements MembershipRMI {
                     if (full) {
                         successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
                         putMessage = new PutRelayMessage();
+                        putMessage.setTransference(true);
                     }
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("File not found");
+                } catch (IOException ignored) {
                 }
             }
         }

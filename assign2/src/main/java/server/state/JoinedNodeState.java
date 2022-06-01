@@ -350,6 +350,7 @@ public class JoinedNodeState extends NodeState {
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();
+            this.membershipService.getStorageService().deleteTombstones();
 
             System.out.println("Left cluster");
         }
