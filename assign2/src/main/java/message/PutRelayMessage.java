@@ -12,6 +12,7 @@ public class PutRelayMessage extends Message {
     public static final int MAX_MESSAGES = 100;
     private int numValues;
     private Map<String, byte[]> values;
+    private boolean transference = false;
 
     public PutRelayMessage() {
         values = new LinkedHashMap<>();
@@ -20,8 +21,17 @@ public class PutRelayMessage extends Message {
     public PutRelayMessage(String headers, byte[] data) {
         Map<String, String> fields = decodeFields(headers);
         numValues = Integer.parseInt(fields.get("numValues"));
+        transference = Boolean.parseBoolean(fields.get("transference"));
 
         parseValues(data);
+    }
+
+    public void setTransference(boolean transference) {
+        this.transference = transference;
+    }
+
+    public boolean isTransference() {
+        return this.transference;
     }
 
     /**
@@ -86,7 +96,7 @@ public class PutRelayMessage extends Message {
     }
 
     public boolean addValue(String key, byte[] value) {
-        if(values.size() >= MAX_MESSAGES) {
+        if (values.size() >= MAX_MESSAGES) {
             return true;
         }
 
@@ -98,6 +108,7 @@ public class PutRelayMessage extends Message {
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
         fields.put("numValues", String.valueOf(values.size()));
+        fields.put("transference", Boolean.valueOf(transference).toString());
 
         StringBuilder builder = new StringBuilder();
 

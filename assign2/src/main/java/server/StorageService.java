@@ -26,6 +26,13 @@ public class StorageService {
             fileWriter.write(value);
         }
         hashLocks.put(key, new Object());
+        if (tombstones.contains(key)) {
+            tombstones.remove(key);
+            File tombstone = new File(getTombstoneFilePath(key));
+            if (!tombstone.delete()) {
+                throw new IOException();
+            }
+        }
     }
 
     public byte[] get(String key) throws IOException {
@@ -73,6 +80,10 @@ public class StorageService {
 
     public Set<String> getHashes() {
         return hashLocks.keySet();
+    }
+
+    public Set<String> getTombstones() {
+        return tombstones;
     }
 
     public Object getHashLock(String hash) {

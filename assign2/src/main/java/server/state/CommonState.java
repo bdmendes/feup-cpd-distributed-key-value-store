@@ -29,6 +29,7 @@ public class CommonState {
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
                 membershipService.getClusterMap().put(node);
+                membershipService.transferKeysToJoiningNode(node);
             }
         }
 
@@ -73,12 +74,16 @@ public class CommonState {
             for (Map.Entry<String, byte[]> entry : putMessage.getValues().entrySet()) {
                 String key = entry.getKey();
                 byte[] value = entry.getValue();
+
+                if (putMessage.isTransference() && membershipService.getStorageService().getTombstones().contains(key)) {
+                    continue;
+                }
+
                 System.out.println("Putting hash " + key);
 
                 membershipService.getStorageService().put(key, value);
                 response.reportSuccess(key);
             }
-
             response.setStatusCode(StatusCode.OK);
         } catch (IOException e) {
             System.out.println("Error storing file");

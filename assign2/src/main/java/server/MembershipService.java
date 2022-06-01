@@ -203,6 +203,7 @@ public class MembershipService implements MembershipRMI {
 
     public void transferKeysToJoiningNode(Node joiningNode) {
         PutRelayMessage putMessage = new PutRelayMessage();
+        putMessage.setTransference(true);
         List<String> successfulHashes = new ArrayList<>();
         final Map<String, Boolean> mustDeleteHash = new HashMap<>();
 
@@ -257,6 +258,7 @@ public class MembershipService implements MembershipRMI {
                     PutRelayMessage putRelayMessage =
                             putMessages.containsKey(node.id()) ?
                                     putMessages.get(node.id()) : new PutRelayMessage();
+                    putRelayMessage.setTransference(true);
 
                     boolean full = putRelayMessage.addValue(hash, bytes);
 
