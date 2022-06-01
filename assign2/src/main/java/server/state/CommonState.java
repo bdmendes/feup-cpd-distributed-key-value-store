@@ -93,7 +93,7 @@ public class CommonState {
     public static void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket, MembershipService membershipService) {
         boolean deleted;
         synchronized (membershipService.getStorageService().getHashLock(deleteRelayMessage.getKey())) {
-            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey(), true);
+            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey(), !deleteRelayMessage.isTransference());
         }
         System.out.println("Deleting hash " + deleteRelayMessage.getKey());
         DeleteRelayReply response = new DeleteRelayReply();

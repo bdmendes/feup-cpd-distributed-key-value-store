@@ -201,6 +201,7 @@ public class MembershipService implements MembershipRMI {
     public void orderJoiningNodeToDeleteMyTombstones(Node joiningNode) {
         for (String hash : storageService.getTombstones()) {
             DeleteRelayMessage message = new DeleteRelayMessage();
+            message.setTransference(true);
             message.setKey(hash);
             CommunicationUtils.dispatchMessageToNode(joiningNode, message, null);
         }
