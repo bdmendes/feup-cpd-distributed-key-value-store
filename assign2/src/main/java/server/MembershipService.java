@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -208,45 +209,47 @@ public class MembershipService implements MembershipRMI {
         if (putMessage.getValues().isEmpty()) {
             return;
         }
-        transferKeysAndDeleteLocals(joiningNode, putMessage);
-    }
 
-    private void transferKeysAndDeleteLocals(Node joiningNode, PutRelayMessage putMessage) {
         try {
             PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage, null);
             if (putReply == null) {
                 return;
             }
             for (String hash : putReply.getSuccessfulHashes()) {
-                this.getStorageService().delete(hash);
+                if (clusterMap.getNodesResponsibleForHash(hash, REPLICATION_FACTOR + 1).size() == REPLICATION_FACTOR + 1) {
+                    this.getStorageService().delete(hash);
+                }
             }
         } catch (ClassCastException e) {
             e.printStackTrace();
         }
     }
 
-    public void transferAllMyKeysToMySuccessor() {
-        Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
-        if (successorNode.equals(this.storageService.getNode())) {
-            System.out.println("No successor node found");
-            return;
-        }
-
-        PutRelayMessage putMessage = new PutRelayMessage();
+    public void transferAllMyKeysToNewSuccessors() {
         for (String hash : getStorageService().getHashes()) {
             try {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
+                PutRelayMessage putMessage = new PutRelayMessage();
                 putMessage.addValue(hash, bytes);
+                List<Node> responsibleNodes = clusterMap.getNodesResponsibleForHash(hash, MembershipService.REPLICATION_FACTOR + 1);
+                for (Node node : responsibleNodes) {
+                    if (node.id().equals(this.getStorageService().getNode().id())) {
+                        continue;
+                    }
+                    PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage, null);
+                    if (putReply == null) {
+                        // TODO: calculate replication again
+                        continue;
+                    }
+                    for (String deletedHash : putReply.getSuccessfulHashes()) {
+                        this.getStorageService().delete(deletedHash);
+                    }
+                }
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
         }
-
-        if (putMessage.getValues().size() == 0) {
-            return;
-        }
-        transferKeysAndDeleteLocals(successorNode, putMessage);
     }
 
     public void removeUnavailableNode(Node node) {

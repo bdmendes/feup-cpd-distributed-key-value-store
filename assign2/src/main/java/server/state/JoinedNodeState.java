@@ -43,6 +43,11 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
+    public void processGetRelay(GetRelayMessage getRelayMessage, Socket clientSocket) {
+        replyValueFromStore(clientSocket, getRelayMessage.getKey());
+    }
+
+    @Override
     public void processGet(GetMessage getMessage, Socket clientSocket) {
         List<Node> responsibleNodes = this.membershipService.getClusterMap()
                 .getNodesResponsibleForHash(getMessage.getKey(), MembershipService.REPLICATION_FACTOR);
@@ -112,10 +117,17 @@ public class JoinedNodeState extends NodeState {
                     // TODO: calculate new node to replicate
                 }
                 if (!sentResponse) {
-                    CommunicationUtils.sendMessage(putRelayReply, clientSocket);
+                    PutReply response = new PutReply();
+                    response.setKey(putMessage.getKey());
+                    response.setStatusCode(putRelayReply.getStatusCode());
+                    CommunicationUtils.sendMessage(response, clientSocket);
                     sentResponse = true;
                 }
             }
+        }
+
+        if (!sentResponse) {
+            sendNodeDownMessage(new PutReply(), putMessage.getKey(), clientSocket);
         }
     }
 
@@ -125,28 +137,54 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
+    public void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket) {
+        boolean deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey());
+        System.out.println("Deleting hash " + deleteRelayMessage.getKey());
+        DeleteRelayReply response = new DeleteRelayReply();
+        response.reportSuccess(deleteRelayMessage.getKey());
+        response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
+        CommunicationUtils.sendMessage(response, clientSocket);
+    }
+
+    @Override
     public void processDelete(DeleteMessage deleteMessage, Socket clientSocket) {
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(deleteMessage.getKey());
-        if (responsibleNode == null) {
-            CommunicationUtils.sendErrorResponse(new DeleteReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, deleteMessage.getKey(), clientSocket);
-            return;
+        List<Node> responsibleNodes = this.membershipService.getClusterMap()
+                .getNodesResponsibleForHash(deleteMessage.getKey(), MembershipService.REPLICATION_FACTOR);
+
+        DeleteRelayMessage deleteRelayMessage = new DeleteRelayMessage();
+        deleteRelayMessage.setKey(deleteMessage.getKey());
+
+        boolean sentResponse = false;
+        for (Node node : responsibleNodes) {
+            if (node.id().equals(this.storageService.getNode().id())) {
+                boolean deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
+                System.out.println("Deleting hash " + deleteMessage.getKey());
+                if (!sentResponse) {
+                    DeleteReply response = new DeleteReply();
+                    response.setKey(deleteMessage.getKey());
+                    response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
+                    CommunicationUtils.sendMessage(response, clientSocket);
+                    sentResponse = true;
+                }
+            } else {
+                System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to " + node);
+                DeleteRelayReply deleteRelayReply = (DeleteRelayReply) CommunicationUtils.dispatchMessageToNode(node, deleteRelayMessage, null);
+                if (deleteRelayReply == null) {
+                    this.membershipService.removeUnavailableNode(node);
+                    continue;
+                }
+                if (!sentResponse) {
+                    DeleteReply response = new DeleteReply();
+                    response.setKey(deleteMessage.getKey());
+                    response.setStatusCode(deleteRelayReply.getStatusCode());
+                    CommunicationUtils.sendMessage(response, clientSocket);
+                    sentResponse = true;
+                }
+            }
         }
 
-        // TODO: Handle replication
-        if (this.membershipService.getStorageService().getHashes().contains(deleteMessage.getKey())
-                || responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            boolean deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
-            DeleteReply response = new DeleteReply();
-            response.setKey(deleteMessage.getKey());
-            response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
-            System.out.println("Deleting hash " + deleteMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
-            System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to node " + responsibleNode);
-            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, deleteMessage, clientSocket) == null) {
-                this.membershipService.removeUnavailableNode(responsibleNode);
-                this.sendNodeDownMessage(new DeleteReply(), deleteMessage.getKey(), clientSocket);
-            }
+        if (!sentResponse) {
+            sendNodeDownMessage(new DeleteReply(), deleteMessage.getKey(), clientSocket);
         }
     }
 
@@ -193,7 +231,9 @@ public class JoinedNodeState extends NodeState {
 
             System.out.println("sent membership message to " + joinMessage.getNodeId());
 
-            if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
+            List<Node> newNodeSuccessors = membershipService.getClusterMap()
+                    .getNodeSuccessors(newNode, MembershipService.REPLICATION_FACTOR - 1);
+            if (newNodeSuccessors.get(newNodeSuccessors.size() - 1)
                     .equals(membershipService.getStorageService().getNode())) {
                 this.membershipService.transferKeysToJoiningNode(newNode);
             }
@@ -326,7 +366,7 @@ public class JoinedNodeState extends NodeState {
                 e.printStackTrace();
             }
 
-            this.membershipService.transferAllMyKeysToMySuccessor();
+            this.membershipService.transferAllMyKeysToNewSuccessors();
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();

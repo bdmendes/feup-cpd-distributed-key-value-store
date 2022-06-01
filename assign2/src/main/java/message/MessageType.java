@@ -13,5 +13,7 @@ public enum MessageType {
     MEMBERSHIP,
     ELECTION,
     LEADER,
-    GET_RELAY
+    GET_RELAY,
+    DELETE_RELAY,
+    DELETE_RELAY_REPLY,
 }
