@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -180,11 +182,28 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
+    private List<String> sendPutRelayMessageToNode(Node node, PutRelayMessage putMessage) {
+        if(putMessage.getValues().size() == 0) {
+            return new ArrayList<>();
+        }
+
+        try {
+            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage);
+
+            return putReply.getSuccessfulHashes();
+        } catch (ClassCastException e) {
+            e.printStackTrace();
+        }
+
+        return new ArrayList<>();
+    }
+
     public void transferKeysToJoiningNode(Node joiningNode) {
         String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
         String thisNodeHash = StoreUtils.sha256(this.getStorageService()
                 .getNode().id().getBytes(StandardCharsets.UTF_8));
         PutRelayMessage putMessage = new PutRelayMessage();
+        List<String> successfulHashes = new ArrayList<>();
 
         for (String hash : this.getStorageService().getHashes()) {
             boolean mustTransferHash;
@@ -201,25 +220,19 @@ public class MembershipService implements MembershipRMI {
             try {
                 File file = new File(this.getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                putMessage.addValue(hash, bytes);
+                boolean full = putMessage.addValue(hash, bytes);
+
+                if (full) {
+                    successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
+                    putMessage = new PutRelayMessage();
+                }
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
         }
 
-        if(putMessage.getValues().size() == 0) {
-            return;
-        }
-
-        try {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage);
-
-            for(String hash : putReply.getSuccessfulHashes()) {
-                this.getStorageService().delete(hash);
-            }
-        } catch (ClassCastException e) {
-            e.printStackTrace();
-        }
+        successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
+        successfulHashes.forEach(hash -> this.getStorageService().delete(hash));
     }
 
     public void transferAllMyKeysToMySuccessor() {
@@ -228,30 +241,25 @@ public class MembershipService implements MembershipRMI {
             System.out.println("No successor node found");
             return;
         }
+        List<String> successfulHashes = new ArrayList<>();
 
         PutRelayMessage putMessage = new PutRelayMessage();
         for (String hash : getStorageService().getHashes()) {
             try {
                 File file = new File(getStorageService().getValueFilePath(hash));
                 byte[] bytes = Files.readAllBytes(file.toPath());
-                putMessage.addValue(hash, bytes);
+                boolean full = putMessage.addValue(hash, bytes);
+
+                if (full) {
+                    successfulHashes.addAll(sendPutRelayMessageToNode(successorNode, putMessage));
+                    putMessage = new PutRelayMessage();
+                }
             } catch (IOException e) {
                 throw new IllegalArgumentException("File not found");
             }
         }
 
-        if(putMessage.getValues().size() == 0) {
-            return;
-        }
-
-        try {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(successorNode, putMessage);
-
-            for(String hash : putReply.getSuccessfulHashes()) {
-                this.getStorageService().delete(hash);
-            }
-        } catch (ClassCastException e) {
-            e.printStackTrace();
-        }
+        successfulHashes.addAll(sendPutRelayMessageToNode(successorNode, putMessage));
+        successfulHashes.forEach(hash -> this.getStorageService().delete(hash));
     }
 }

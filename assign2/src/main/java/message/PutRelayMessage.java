@@ -8,6 +8,7 @@ import java.util.*;
 import static message.MessageConstants.END_OF_LINE;
 
 public class PutRelayMessage extends Message {
+    public static final int MAX_MESSAGES = 100;
     private int numValues;
     private Map<String, byte[]> values;
 
@@ -83,8 +84,13 @@ public class PutRelayMessage extends Message {
         return values;
     }
 
-    public void addValue(String key, byte[] value) {
+    public boolean addValue(String key, byte[] value) {
+        if(values.size() >= MAX_MESSAGES) {
+            return true;
+        }
+
         values.put(key, value);
+        return values.size() >= MAX_MESSAGES;
     }
 
 
