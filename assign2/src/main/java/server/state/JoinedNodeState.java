@@ -2,6 +2,7 @@ package server.state;
 
 import communication.CommunicationUtils;
 import message.*;
+import server.MembershipRMI;
 import server.MembershipService;
 import server.Node;
 import utils.MembershipLog;
@@ -12,6 +13,8 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+
+import static server.MembershipRMI.Status.OK;
 
 public class JoinedNodeState extends NodeState {
     public JoinedNodeState(MembershipService membershipService) {
@@ -335,15 +338,15 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public boolean join() {
-        return true;
+    public MembershipRMI.Status join() {
+        return MembershipRMI.Status.ALREADY_JOINED;
     }
 
     @Override
-    public boolean leave() {
+    public MembershipRMI.Status leave() {
         synchronized (this.membershipService.joinLeaveLock) {
             if (!this.membershipService.isJoined()) {
-                return true;
+                return MembershipRMI.Status.ALREADY_LEFT;
             }
 
             this.membershipService.setNodeState(new InitNodeState(this.membershipService));
@@ -362,7 +365,7 @@ public class JoinedNodeState extends NodeState {
             } catch (IOException e) {
                 e.printStackTrace();
                 this.membershipService.setNodeState(this);
-                return false;
+                return MembershipRMI.Status.ERROR;
             }
 
             try {
@@ -379,7 +382,7 @@ public class JoinedNodeState extends NodeState {
             System.out.println("Left cluster");
         }
 
-        return true;
+        return OK;
     }
 
     @Override

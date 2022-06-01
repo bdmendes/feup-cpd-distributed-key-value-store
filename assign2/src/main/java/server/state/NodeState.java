@@ -2,6 +2,7 @@ package server.state;
 
 import message.Message;
 import message.MessageVisitor;
+import server.MembershipRMI;
 import server.MembershipService;
 import server.StorageService;
 
@@ -22,9 +23,9 @@ public abstract class NodeState implements MessageVisitor {
         message.accept(this, socket);
     }
 
-    public abstract boolean join();
+    public abstract MembershipRMI.Status join();
 
-    public abstract boolean leave();
+    public abstract MembershipRMI.Status leave();
 
     public abstract boolean joined();
 }

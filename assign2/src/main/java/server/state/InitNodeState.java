@@ -2,6 +2,7 @@ package server.state;
 
 import communication.CommunicationUtils;
 import message.*;
+import server.MembershipRMI;
 import server.MembershipService;
 import server.tasks.JoinInitTask;
 
@@ -31,10 +32,14 @@ public class InitNodeState extends NodeState {
     }
 
     @Override
-    public boolean join() {
+    public MembershipRMI.Status join() {
         synchronized (this.membershipService.joinLeaveLock) {
             if (this.membershipService.isJoined()) {
-                return true; // TODO: check if truly joined or just in progress and return
+                if(this.membershipService.getNodeState().joined()) {
+                    return MembershipRMI.Status.ALREADY_JOINED;
+                }
+
+                return MembershipRMI.Status.JOIN_IN_PROGRESS;
             }
             this.membershipService.setNodeState(new JoiningNodeState(this.membershipService));
 
@@ -46,7 +51,7 @@ public class InitNodeState extends NodeState {
             } catch (IOException e) {
                 System.out.println("Failed to create server socket");
                 this.membershipService.setNodeState(this);
-                return false; // TODO: return ERROR
+                return MembershipRMI.Status.ERROR;
             }
 
             int counter = this.membershipService.getMembershipCounter().incrementAndGet();
@@ -66,6 +71,7 @@ public class InitNodeState extends NodeState {
             } catch (IOException e) {
                 System.out.println("Failed to send join message");
                 this.membershipService.setNodeState(this);
+                this.membershipService.getMembershipCounter().decrementAndGet();
                 try {
                     this.membershipService.getMulticastHandler().close();
                 } catch (IOException e1) {
@@ -83,25 +89,27 @@ public class InitNodeState extends NodeState {
                 } catch (IOException e1) {
                     e1.printStackTrace();
                 }
-                return false;
+                return MembershipRMI.Status.ERROR;
             }
 
             try {
                 joinInitThread.join();
             } catch (InterruptedException e) {
                 this.membershipService.setNodeState(this);
-                return false;
+                this.membershipService.getMembershipCounter().decrementAndGet();
+
+                return MembershipRMI.Status.ERROR;
             }
 
             this.membershipService.setNodeState(new JoinedNodeState(this.membershipService));
         }
 
-        return true;
+        return MembershipRMI.Status.OK;
     }
 
     @Override
-    public boolean leave() {
-        return true;
+    public MembershipRMI.Status leave() {
+        return MembershipRMI.Status.ALREADY_LEFT;
     }
 
     @Override
