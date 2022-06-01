@@ -24,7 +24,12 @@ public class Store {
             final Registry registry = registryTemp;
 
             String registryName = "reg" + membershipService.getStorageService().getNode().id();
-            registry.rebind(registryName, stub);
+            try {
+                registry.bind(registryName, stub);
+            } catch (java.rmi.AlreadyBoundException alreadyBoundException) {
+                System.err.println("IDs must be unique in this cluster. This node is invalid. Exiting...");
+                System.exit(1);
+            }
             System.err.println("Server ready for RMI operations on registry: " + registryName);
 
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {

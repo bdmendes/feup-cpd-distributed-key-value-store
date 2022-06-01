@@ -17,11 +17,15 @@ public class CommonState {
     public static void processMembership(MembershipMessage membershipMessage, MembershipService membershipService) {
         if (membershipMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
             System.out.println("Received membership message from myself");
-            return;
         }
 
         Map<String, Integer> recentLogs = membershipService.getMembershipLog(32);
         for (Node node : membershipMessage.getNodes()) {
+            if (node.id().equals(membershipService.getStorageService().getNode().id())
+                    && node.port() != membershipService.getStorageService().getNode().port()) {
+                System.err.println("IDs must be unique in this cluster. This node is invalid. Exiting...");
+                System.exit(1);
+            }
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
                 membershipService.getClusterMap().put(node);
