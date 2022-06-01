@@ -183,13 +183,13 @@ public class MembershipService implements MembershipRMI {
     }
 
     private List<String> sendPutRelayMessageToNode(Node node, PutRelayMessage putMessage) {
-        if(putMessage.getValues().size() == 0) {
+        if (putMessage.getValues().size() == 0) {
             return new ArrayList<>();
         }
 
         try {
             PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage, null);
-            if(putReply == null) {
+            if (putReply == null) {
                 return new ArrayList<>();
             }
 
@@ -250,17 +250,17 @@ public class MembershipService implements MembershipRMI {
 
                 List<Node> responsibleNodes = clusterMap.getNodesResponsibleForHash(hash, MembershipService.REPLICATION_FACTOR + 1);
                 for (Node node : responsibleNodes) {
-                    if(node.id().equals(getStorageService().getNode().id())) {
+                    if (node.id().equals(getStorageService().getNode().id())) {
                         continue;
                     }
 
                     PutRelayMessage putRelayMessage =
                             putMessages.containsKey(node.id()) ?
-                            putMessages.get(node.id()) : new PutRelayMessage();
+                                    putMessages.get(node.id()) : new PutRelayMessage();
 
                     boolean full = putRelayMessage.addValue(hash, bytes);
 
-                    if(full) {
+                    if (full) {
                         PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(
                                 node,
                                 putRelayMessage,

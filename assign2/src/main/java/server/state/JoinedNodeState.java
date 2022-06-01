@@ -31,7 +31,10 @@ public class JoinedNodeState extends NodeState {
         GetReply response = new GetReply();
         response.setKey(key);
         try {
-            byte[] value = membershipService.getStorageService().get(key);
+            byte[] value;
+            synchronized (storageService.getHashLock(key)) {
+                value = membershipService.getStorageService().get(key);
+            }
             response.setValue(value);
             response.setStatusCode(StatusCode.OK);
             System.out.println("Getting hash " + key);
@@ -65,6 +68,7 @@ public class JoinedNodeState extends NodeState {
                     GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNode(node, getRelayMessage, null);
                     if (message == null) {
                         this.membershipService.removeUnavailableNode(node);
+                        processGet(getMessage, clientSocket);
                         continue;
                     }
                     if (!message.getStatusCode().equals(StatusCode.OK)) {
@@ -89,11 +93,12 @@ public class JoinedNodeState extends NodeState {
         PutRelayMessage putRelayMessage = new PutRelayMessage();
         putRelayMessage.addValue(putMessage.getKey(), putMessage.getValue());
 
-        boolean sentResponse = false;
+        PutReply response = new PutReply();
+        response.setKey(putMessage.getKey());
+
+        boolean positiveResponse = false;
         for (Node node : responsibleNodes) {
             if (node.id().equals(this.storageService.getNode().id())) {
-                PutReply response = new PutReply();
-                response.setKey(putMessage.getKey());
                 try {
                     membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
                     response.setStatusCode(StatusCode.OK);
@@ -101,33 +106,31 @@ public class JoinedNodeState extends NodeState {
                     response.setStatusCode(StatusCode.ERROR);
                 }
                 System.out.println("Putting hash " + putMessage.getKey());
-                if (!sentResponse) {
-                    CommunicationUtils.sendMessage(response, clientSocket);
-                    sentResponse = true;
+                if (!positiveResponse && response.getStatusCode() == StatusCode.OK) {
+                    positiveResponse = true;
                 }
             } else {
                 System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to " + node);
                 PutRelayReply putRelayReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putRelayMessage, null);
                 if (putRelayReply == null) {
-                    // TODO: calculate new node to replicate
                     this.membershipService.removeUnavailableNode(node);
-                    continue;
+                    processPut(putMessage, clientSocket);
+                    return;
                 }
                 if (!putRelayReply.getStatusCode().equals(StatusCode.OK)) {
-                    // TODO: calculate new node to replicate
+                    continue;
                 }
-                if (!sentResponse) {
-                    PutReply response = new PutReply();
-                    response.setKey(putMessage.getKey());
+                if (!positiveResponse) {
                     response.setStatusCode(putRelayReply.getStatusCode());
-                    CommunicationUtils.sendMessage(response, clientSocket);
-                    sentResponse = true;
+                    positiveResponse = true;
                 }
             }
         }
 
-        if (!sentResponse) {
+        if (!positiveResponse) {
             sendNodeDownMessage(new PutReply(), putMessage.getKey(), clientSocket);
+        } else {
+            CommunicationUtils.sendMessage(response, clientSocket);
         }
     }
 
@@ -138,7 +141,10 @@ public class JoinedNodeState extends NodeState {
 
     @Override
     public void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket) {
-        boolean deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey());
+        boolean deleted;
+        synchronized (storageService.getHashLock(deleteRelayMessage.getKey())) {
+            deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey());
+        }
         System.out.println("Deleting hash " + deleteRelayMessage.getKey());
         DeleteRelayReply response = new DeleteRelayReply();
         response.reportSuccess(deleteRelayMessage.getKey());
@@ -154,37 +160,42 @@ public class JoinedNodeState extends NodeState {
         DeleteRelayMessage deleteRelayMessage = new DeleteRelayMessage();
         deleteRelayMessage.setKey(deleteMessage.getKey());
 
-        boolean sentResponse = false;
+        DeleteReply response = new DeleteReply();
+        response.setKey(deleteMessage.getKey());
+
+        boolean positiveResponse = false;
         for (Node node : responsibleNodes) {
             if (node.id().equals(this.storageService.getNode().id())) {
-                boolean deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
+                boolean deleted;
+                synchronized (storageService.getHashLock(deleteMessage.getKey())) {
+                    deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
+                }
                 System.out.println("Deleting hash " + deleteMessage.getKey());
-                if (!sentResponse) {
-                    DeleteReply response = new DeleteReply();
-                    response.setKey(deleteMessage.getKey());
-                    response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
-                    CommunicationUtils.sendMessage(response, clientSocket);
-                    sentResponse = true;
+                if (deleted) {
+                    response.setStatusCode(StatusCode.OK);
+                }
+                if (!positiveResponse && response.getStatusCode() == StatusCode.OK) {
+                    positiveResponse = true;
                 }
             } else {
                 System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to " + node);
-                DeleteRelayReply deleteRelayReply = (DeleteRelayReply) CommunicationUtils.dispatchMessageToNode(node, deleteRelayMessage, null);
+                DeleteRelayReply deleteRelayReply = (DeleteRelayReply)
+                        CommunicationUtils.dispatchMessageToNode(node, deleteRelayMessage, null);
                 if (deleteRelayReply == null) {
                     this.membershipService.removeUnavailableNode(node);
-                    continue;
+                    return;
                 }
-                if (!sentResponse) {
-                    DeleteReply response = new DeleteReply();
-                    response.setKey(deleteMessage.getKey());
+                if (!positiveResponse && deleteRelayReply.getStatusCode() == StatusCode.OK) {
                     response.setStatusCode(deleteRelayReply.getStatusCode());
-                    CommunicationUtils.sendMessage(response, clientSocket);
-                    sentResponse = true;
+                    positiveResponse = true;
                 }
             }
         }
 
-        if (!sentResponse) {
+        if (!positiveResponse) {
             sendNodeDownMessage(new DeleteReply(), deleteMessage.getKey(), clientSocket);
+        } else {
+            CommunicationUtils.sendMessage(response, clientSocket);
         }
     }
 

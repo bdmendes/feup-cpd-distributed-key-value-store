@@ -7,12 +7,13 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 public class StorageService {
     private final Node node;
-    private final Set<String> hashes = Collections.synchronizedSet(new HashSet<>());
+    private final Map<String, Object> hashLocks = Collections.synchronizedMap(new HashMap<>());
 
     public StorageService(Node node) throws IOException {
         this.node = node;
@@ -24,7 +25,7 @@ public class StorageService {
         try (FileOutputStream fileWriter = new FileOutputStream(getValueFilePath(key), false)) {
             fileWriter.write(value);
         }
-        hashes.add(key);
+        hashLocks.put(key, new Object());
     }
 
     public byte[] get(String key) throws IOException {
@@ -34,7 +35,7 @@ public class StorageService {
     }
 
     public boolean delete(String key) {
-        hashes.remove(key);
+        hashLocks.remove(key);
         File file = new File(getValueFilePath(key));
         return file.delete();
     }
@@ -56,7 +57,11 @@ public class StorageService {
     }
 
     public Set<String> getHashes() {
-        return hashes;
+        return hashLocks.keySet();
+    }
+
+    public Object getHashLock(String hash) {
+        return hashLocks.getOrDefault(hash, new Object());
     }
 
     private void readHashesFromFilesDirectory() {
@@ -66,7 +71,7 @@ public class StorageService {
             return;
         }
         for (File file : files) {
-            hashes.add(file.getName());
+            hashLocks.put(file.getName(), new Object());
         }
     }
 }

@@ -35,6 +35,17 @@ public class CommonState {
         for (Map.Entry<String, Integer> entry : membershipMessage.getMembershipLog().entrySet()) {
             String nodeId = entry.getKey();
             Integer membershipCounter = entry.getValue();
+
+            if (nodeId.equals(membershipService.getStorageService().getNode().id())
+                    && membershipCounter > membershipService.getNodeMembershipCounter()) {
+                while (membershipCounter > membershipService.getNodeMembershipCounter()) {
+                    membershipService.getMembershipCounter().incrementAndGet();
+                }
+                membershipService.setNodeState(new InitNodeState(membershipService));
+                membershipService.join();
+                continue;
+            }
+
             boolean containsEventFromNode = recentLogs.containsKey(nodeId);
             boolean newerThanLocalEvent = containsEventFromNode
                     && recentLogs.get(nodeId) < membershipCounter;

@@ -2,6 +2,7 @@ package server;
 
 import communication.IPAddress;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -12,6 +13,19 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 public class Store {
+    public static boolean removeLocalStorage(StorageService storageService) {
+        File directory = new File(storageService.getStorageDirectory());
+        if (directory.exists()) {
+            File[] files = directory.listFiles();
+            if (null != files) {
+                for (File file : files) {
+                    file.delete();
+                }
+            }
+        }
+        return directory.delete();
+    }
+
     public static void bindRmiMethods(MembershipService membershipService) {
         try {
             MembershipRMI stub = (MembershipRMI) UnicastRemoteObject.exportObject(membershipService, 0);
@@ -28,6 +42,7 @@ public class Store {
                 registry.bind(registryName, stub);
             } catch (java.rmi.AlreadyBoundException alreadyBoundException) {
                 System.err.println("IDs must be unique in this cluster. This node is invalid. Exiting...");
+                removeLocalStorage(membershipService.getStorageService());
                 System.exit(1);
             }
             System.err.println("Server ready for RMI operations on registry: " + registryName);
