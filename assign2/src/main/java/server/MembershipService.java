@@ -12,12 +12,14 @@ import server.state.NodeState;
 import server.tasks.ElectionTask;
 import server.tasks.MembershipTask;
 import server.tasks.MessageReceiverTask;
-import utils.*;
+import utils.ClusterMap;
+import utils.MembershipCounter;
+import utils.MembershipLog;
+import utils.SentMemberships;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -187,6 +189,9 @@ public class MembershipService implements MembershipRMI {
 
         try {
             PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage, null);
+            if(putReply == null) {
+                return new ArrayList<>();
+            }
 
             return putReply.getSuccessfulHashes();
         } catch (ClassCastException e) {
@@ -197,25 +202,18 @@ public class MembershipService implements MembershipRMI {
     }
 
     public void transferKeysToJoiningNode(Node joiningNode) {
-        String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
-        String thisNodeHash = StoreUtils.sha256(this.getStorageService()
-                .getNode().id().getBytes(StandardCharsets.UTF_8));
         PutRelayMessage putMessage = new PutRelayMessage();
         List<String> successfulHashes = new ArrayList<>();
+        final Map<String, Boolean> mustDeleteHash = new HashMap<>();
 
         for (String hash : this.getStorageService().getHashes()) {
-            boolean hashIsLessThanJoiningNode = hash.compareTo(joiningNodeHash) <= 0;
-            boolean hashIsHigherThanThisNode = hash.compareTo(thisNodeHash) >= 0;
-            boolean mustTransferHash =
-                    joiningNodeHash.compareTo(thisNodeHash) < 0
-                            ? hashIsLessThanJoiningNode || hashIsHigherThanThisNode
-                            : hashIsLessThanJoiningNode && hashIsHigherThanThisNode;
-            boolean mustReplicateHash =
-                    clusterMap.getNodesResponsibleForHash(hash, REPLICATION_FACTOR + 1).size() <= REPLICATION_FACTOR;
-
-            if (!mustTransferHash && !mustReplicateHash) {
+            List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
+            boolean mustCopyHash = responsibleNodes.contains(joiningNode);
+            if (!mustCopyHash) {
                 continue;
             }
+            mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
+
             System.out.println("Transferring key " + hash + " to joining node " + joiningNode.id());
 
             try {
@@ -235,11 +233,12 @@ public class MembershipService implements MembershipRMI {
         successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
 
         for (String hash : successfulHashes) {
-            if (clusterMap.getNodesResponsibleForHash(hash, REPLICATION_FACTOR + 1).size() == REPLICATION_FACTOR + 1) {
+            if (mustDeleteHash.getOrDefault(hash, Boolean.FALSE)) {
                 this.getStorageService().delete(hash);
             }
         }
     }
+
     public void transferAllMyKeysToNewSuccessors() {
         Map<String, PutRelayMessage> putMessages = new HashMap<>();
         List<String> successfulHashes = new ArrayList<>();

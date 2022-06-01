@@ -230,13 +230,7 @@ public class JoinedNodeState extends NodeState {
             );
 
             System.out.println("sent membership message to " + joinMessage.getNodeId());
-
-            List<Node> newNodeSuccessors = membershipService.getClusterMap()
-                    .getReplicationNodes(newNode, MembershipService.REPLICATION_FACTOR - 1);
-            if (newNodeSuccessors.get(newNodeSuccessors.size() - 1)
-                    .equals(membershipService.getStorageService().getNode())) {
-                this.membershipService.transferKeysToJoiningNode(newNode);
-            }
+            this.membershipService.transferKeysToJoiningNode(newNode);
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
