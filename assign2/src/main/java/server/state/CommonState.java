@@ -49,17 +49,17 @@ public class CommonState {
             if (!containsEventFromNode || newerThanLocalEvent) {
                 membershipService.getMembershipLog().put(nodeId, membershipCounter);
                 boolean nodeJoined = membershipCounter % 2 == 0;
-                Optional<Node> node = membershipMessage.getNodes().stream().filter(n -> n.id().equals(nodeId)).findFirst();
-                if (node.isEmpty()) {
-                    continue;
-                }
                 if (nodeJoined) {
+                    Optional<Node> node = membershipMessage.getNodes().stream().filter(n -> n.id().equals(nodeId)).findFirst();
+                    if (node.isEmpty()) {
+                        continue;
+                    }
                     membershipService.getClusterMap().put(node.get());
                     if (membershipService.getNodeState().joined()) {
                         membershipService.transferKeysToJoiningNode(node.get());
                     }
                 } else {
-                    membershipService.removeUnavailableNode(node.get());
+                    membershipService.removeUnavailableNodeById(nodeId, false);
                 }
             }
         }

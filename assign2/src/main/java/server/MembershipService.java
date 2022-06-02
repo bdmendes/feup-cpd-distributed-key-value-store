@@ -18,10 +18,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -173,7 +170,7 @@ public class MembershipService implements MembershipRMI {
         while (true) {
             Node nextNode = getClusterMap().getNodeSuccessor(currentNode);
             if (!CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message)) {
-                removeUnavailableNode(nextNode);
+                removeUnavailableNode(nextNode, true);
                 currentNode = nextNode;
             } else {
                 return;
@@ -284,7 +281,7 @@ public class MembershipService implements MembershipRMI {
                             putRelayMessage = new PutRelayMessage();
                             putRelayMessage.setTransference(true);
                             if (putReply == null) {
-                                this.removeUnavailableNode(node);
+                                this.removeUnavailableNode(node, true);
                                 return;
                             }
                             successfulHashes.addAll(putReply.getSuccessfulHashes());
@@ -303,7 +300,7 @@ public class MembershipService implements MembershipRMI {
                     entry.getValue(),
                     null);
             if (putReply == null) {
-                this.removeUnavailableNode(this.clusterMap.getNodeFromId(entry.getKey()));
+                this.removeUnavailableNode(this.clusterMap.getNodeFromId(entry.getKey()), true);
                 return;
             }
             successfulHashes.addAll(putReply.getSuccessfulHashes());
@@ -316,12 +313,20 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
-    public void removeUnavailableNode(Node node) {
+    public void removeUnavailableNodeById(String id, boolean incrementCounter) {
+        Optional<Node> node = this.clusterMap.getNodes().stream().filter(n -> n.id().equals(id)).findFirst();
+        if (node.isEmpty()) {
+            return;
+        }
+        removeUnavailableNode(node.get(), incrementCounter);
+    }
+
+    public void removeUnavailableNode(Node node, boolean incrementCounter) {
         boolean mustSendToNewSuccessor = clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
                 || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node);
 
         Integer nodeCounter = this.membershipLog.get(node.id());
-        if (nodeCounter != null) {
+        if (nodeCounter != null && incrementCounter) {
             this.membershipLog.put(node.id(), nodeCounter + 1);
         }
         this.clusterMap.remove(node);

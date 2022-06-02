@@ -65,7 +65,7 @@ public class JoinedNodeState extends NodeState {
                 try {
                     GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNode(node, getRelayMessage, null);
                     if (message == null) {
-                        this.membershipService.removeUnavailableNode(node);
+                        this.membershipService.removeUnavailableNode(node, true);
                         processGet(getMessage, clientSocket);
                         return;
                     }
@@ -107,7 +107,7 @@ public class JoinedNodeState extends NodeState {
                 System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to " + node);
                 PutRelayReply putRelayReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putRelayMessage, null);
                 if (putRelayReply == null) {
-                    this.membershipService.removeUnavailableNode(node);
+                    this.membershipService.removeUnavailableNode(node, true);
                     processPut(putMessage, clientSocket);
                     return;
                 }
@@ -159,7 +159,7 @@ public class JoinedNodeState extends NodeState {
                 DeleteRelayReply deleteRelayReply = (DeleteRelayReply)
                         CommunicationUtils.dispatchMessageToNode(node, deleteRelayMessage, null);
                 if (deleteRelayReply == null) {
-                    this.membershipService.removeUnavailableNode(node);
+                    this.membershipService.removeUnavailableNode(node, true);
                     processDelete(deleteMessage, clientSocket);
                     return;
                 }
