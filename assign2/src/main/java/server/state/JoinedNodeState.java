@@ -66,7 +66,7 @@ public class JoinedNodeState extends NodeState {
                     if (message == null) {
                         this.membershipService.removeUnavailableNode(node);
                         processGet(getMessage, clientSocket);
-                        continue;
+                        return;
                     }
                     if (!message.getStatusCode().equals(StatusCode.OK)) {
                         continue;
@@ -348,7 +348,7 @@ public class JoinedNodeState extends NodeState {
             }
 
             this.membershipService.getMembershipCounter().commitJoin();
-            this.membershipService.transferAllMyKeysToNewSuccessors();
+            this.membershipService.transferMyKeysToCurrentResponsibleNodes(true);
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();
