@@ -26,9 +26,6 @@ public class CommonState {
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
                 membershipService.getClusterMap().put(node);
-                if (membershipService.getNodeState().joined()) {
-                    membershipService.transferKeysToJoiningNode(node);
-                }
             }
         }
 
@@ -56,6 +53,9 @@ public class CommonState {
                     Optional<Node> node = membershipMessage.getNodes().stream().filter(n -> n.id().equals(nodeId)).findFirst();
                     if (node.isEmpty()) continue;
                     membershipService.getClusterMap().put(node.get());
+                    if (membershipService.getNodeState().joined()) {
+                        membershipService.transferKeysToJoiningNode(node.get());
+                    }
                 } else {
                     membershipService.getClusterMap().removeId(nodeId);
                 }
