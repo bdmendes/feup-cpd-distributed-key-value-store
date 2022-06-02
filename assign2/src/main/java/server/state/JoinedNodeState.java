@@ -190,6 +190,9 @@ public class JoinedNodeState extends NodeState {
         this.membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
         this.membershipService.getClusterMap().put(newNode);
 
+        this.membershipService.transferKeysToJoiningNode(newNode);
+        this.membershipService.orderJoiningNodeToDeleteMyTombstones(newNode);
+
         try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
             Thread.sleep(new Random().nextInt(1200));
             if (this.membershipService.getSentMemberships().hasSentMembership(
@@ -213,10 +216,6 @@ public class JoinedNodeState extends NodeState {
             );
 
             System.out.println("sent membership message to " + joinMessage.getNodeId());
-
-            this.membershipService.transferKeysToJoiningNode(newNode);
-            this.membershipService.orderJoiningNodeToDeleteMyTombstones(newNode);
-
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
