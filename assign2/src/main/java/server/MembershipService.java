@@ -214,44 +214,59 @@ public class MembershipService implements MembershipRMI {
         System.out.println("Transferring my keys to current responsible nodes...");
         List<String> successfulHashes = new ArrayList<>();
         final Map<String, Boolean> mustDeleteHash = new HashMap<>();
+        final Map<String, PutRelayMessage> putMessages = new HashMap<>();
 
-        for (Node node : nodes) {
-            if(node.id().equals(storageService.getNode().id())) {
-                continue;
-            }
-            System.out.println("Transferring my keys to node " + node.id());
+        for (String hash : this.getStorageService().getHashes()) {
+            synchronized (getStorageService().getHashLock(hash)) {
+                List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
+                mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
 
-            PutRelayMessage putMessage = new PutRelayMessage();
-            putMessage.setTransference(true);
+                File file = new File(this.getStorageService().getValueFilePath(hash));
+                byte[] bytes;
 
-            for (String hash : this.getStorageService().getHashes()) {
-                synchronized (getStorageService().getHashLock(hash)) {
-                    List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
+                try {
+                    bytes = Files.readAllBytes(file.toPath());
+                } catch (IOException ignored) {
+                    continue;
+                }
+
+                for (Node node : nodes) {
                     boolean mustCopyHash = responsibleNodes.contains(node);
                     System.out.println("Must copy hash " + hash + "? " + mustCopyHash + " - " + node);
                     if (!mustCopyHash) {
                         continue;
                     }
-                    mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
-
-                    System.out.println("Transferring key " + hash + " to joining node " + node.id());
-
-                    try {
-                        File file = new File(this.getStorageService().getValueFilePath(hash));
-                        byte[] bytes = Files.readAllBytes(file.toPath());
-                        boolean full = putMessage.addValue(hash, bytes);
-
-                        if (full) {
-                            successfulHashes.addAll(sendPutRelayMessageToNode(node, putMessage));
-                            putMessage = new PutRelayMessage();
-                            putMessage.setTransference(true);
-                        }
-                    } catch (IOException ignored) {
+                    if(node.id().equals(storageService.getNode().id())) {
+                        continue;
                     }
+                    System.out.println("Transferring key " + hash + " to node " + node.id());
+
+                    PutRelayMessage putMessage = putMessages.containsKey(node.id()) ?
+                            putMessages.get(node.id()) :
+                            new PutRelayMessage();
+                    putMessage.setTransference(true);
+                    boolean full = putMessage.addValue(hash, bytes);
+
+                    if (full) {
+                        successfulHashes.addAll(sendPutRelayMessageToNode(node, putMessage));
+                        putMessage = new PutRelayMessage();
+                        putMessage.setTransference(true);
+                    }
+
+                    putMessages.put(node.id(), putMessage);
                 }
             }
+        }
 
-            successfulHashes.addAll(sendPutRelayMessageToNode(node, putMessage));
+        for(Map.Entry<String, PutRelayMessage> entry : putMessages.entrySet()) {
+            successfulHashes.addAll(
+                    sendPutRelayMessageToNode(
+                            clusterMap.getNodeFromId(
+                                    entry.getKey()
+                            ),
+                            entry.getValue()
+                    )
+            );
         }
 
         for (String hash : successfulHashes) {
