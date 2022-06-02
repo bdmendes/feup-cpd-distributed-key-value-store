@@ -7,9 +7,9 @@ import java.util.Map;
 public class GetRelayMessage extends Message {
     private String key;
     private String target;
-    private byte[] value;
 
-    public GetRelayMessage() {}
+    public GetRelayMessage() {
+    }
 
     public GetRelayMessage(String headers) {
         Map<String, String> fields = decodeFields(headers);
@@ -23,14 +23,6 @@ public class GetRelayMessage extends Message {
 
     public String getKey() {
         return key;
-    }
-
-    public String getTarget() {
-        return target;
-    }
-
-    public void setTarget(String target) {
-        this.target = target;
     }
 
     @Override

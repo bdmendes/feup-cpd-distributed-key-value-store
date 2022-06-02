@@ -61,7 +61,6 @@ public class JoinedNodeState extends NodeState {
             } else {
                 GetRelayMessage getRelayMessage = new GetRelayMessage();
                 getRelayMessage.setKey(getMessage.getKey());
-                getRelayMessage.setTarget(node.id());
                 try {
                     GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNode(node, getRelayMessage, null);
                     if (message == null) {
