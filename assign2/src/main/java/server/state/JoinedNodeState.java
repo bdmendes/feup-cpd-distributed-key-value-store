@@ -289,10 +289,8 @@ public class JoinedNodeState extends NodeState {
 
                     return subtotal + current - element.getValue();
                 }, Integer::sum);
-        System.out.println("Membership difference: " + membershipDifference);
-        System.out.println("Current node: " + currentNode.id().compareTo(origin));
 
-        if (membershipDifference > 0 ) {
+        if (membershipDifference > 0) {
             return;
         } else if (membershipDifference == 0 && currentNode.id().compareTo(origin) < 0) {
             return;
