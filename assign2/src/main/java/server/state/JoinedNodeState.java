@@ -347,7 +347,6 @@ public class JoinedNodeState extends NodeState {
             try {
                 this.membershipService.getMulticastHandler().close();
             } catch (IOException e) {
-                this.membershipService.getMembershipCounter().rollbackJoin();
                 e.printStackTrace();
             }
 
