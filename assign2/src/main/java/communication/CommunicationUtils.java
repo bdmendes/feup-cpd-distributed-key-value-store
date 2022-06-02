@@ -1,8 +1,8 @@
 package communication;
 
+import message.KeyMessage;
 import message.Message;
 import message.MessageFactory;
-import message.ReplyKeyMessage;
 import message.StatusCode;
 import message.messagereader.MessageReader;
 import server.Node;
@@ -77,7 +77,7 @@ public class CommunicationUtils {
         return false;
     }
 
-    public static void sendErrorResponse(ReplyKeyMessage response, StatusCode statusCode, String requestedKey, Socket clientSocket) {
+    public static void sendErrorResponse(KeyMessage response, StatusCode statusCode, String requestedKey, Socket clientSocket) {
         response.setKey(requestedKey);
         response.setStatusCode(statusCode);
         CommunicationUtils.sendMessage(response, clientSocket);

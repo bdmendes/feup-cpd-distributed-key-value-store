@@ -1,8 +1,9 @@
 package message;
 
-public abstract class ReplyKeyMessage extends ReplyMessage {
+public abstract class KeyMessage extends StatusMessage {
     private String key;
-    public void setKey(String key){
+
+    public void setKey(String key) {
         this.key = key;
     }
 

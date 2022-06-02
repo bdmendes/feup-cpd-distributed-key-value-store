@@ -2,7 +2,7 @@ package message;
 
 import java.util.Map;
 
-public abstract class ReplyMessage extends Message {
+public abstract class StatusMessage extends Message {
     private StatusCode statusCode = StatusCode.OK;
 
     public StatusCode getStatusCode() {

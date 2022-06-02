@@ -4,7 +4,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GetMessage extends ReplyKeyMessage {
+public class GetMessage extends KeyMessage {
 
     public GetMessage(String headers) {
         Map<String, String> fields = decodeFields(headers);

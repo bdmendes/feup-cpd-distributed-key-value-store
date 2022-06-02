@@ -4,7 +4,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PutMessage extends ReplyKeyMessage {
+public class PutMessage extends KeyMessage {
     protected byte[] value;
 
     public PutMessage() {

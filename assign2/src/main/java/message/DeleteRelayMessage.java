@@ -4,7 +4,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DeleteRelayMessage extends ReplyKeyMessage {
+public class DeleteRelayMessage extends KeyMessage {
     private boolean transference = false;
 
     public DeleteRelayMessage(String headers) {
