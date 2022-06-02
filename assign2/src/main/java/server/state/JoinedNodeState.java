@@ -330,24 +330,25 @@ public class JoinedNodeState extends NodeState {
             }
 
             try {
-                int counter = this.membershipService.getMembershipCounter().get();
-                counter++;
-
+                int counter = this.membershipService.getMembershipCounter().beginJoin();
                 JoinMessage message = this.membershipService.createJoinMessage(-1, counter);
+
                 this.membershipService.getMulticastHandler().sendMessage(message);
             } catch (IOException e) {
                 e.printStackTrace();
                 this.membershipService.setNodeState(this);
+                this.membershipService.getMembershipCounter().rollbackJoin();
                 return MembershipRMI.Status.ERROR;
             }
 
             try {
                 this.membershipService.getMulticastHandler().close();
             } catch (IOException e) {
+                this.membershipService.getMembershipCounter().rollbackJoin();
                 e.printStackTrace();
             }
 
-            this.membershipService.getMembershipCounter().incrementAndGet();
+            this.membershipService.getMembershipCounter().commitJoin();
             this.membershipService.transferAllMyKeysToNewSuccessors();
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();

@@ -54,9 +54,7 @@ public class InitNodeState extends NodeState {
                 return MembershipRMI.Status.ERROR;
             }
 
-            int counter = this.membershipService.getMembershipCounter().get();
-            counter++;
-
+            int counter = this.membershipService.getMembershipCounter().beginJoin();
             JoinMessage joinMessage = membershipService.createJoinMessage(serverSocket.getLocalPort(), counter);
 
             JoinInitTask joinInitTask = new JoinInitTask(this.membershipService, serverSocket, joinMessage, 2000);
@@ -72,6 +70,7 @@ public class InitNodeState extends NodeState {
             } catch (IOException e) {
                 System.out.println("Failed to send join message");
                 this.membershipService.setNodeState(this);
+                this.membershipService.getMembershipCounter().rollbackJoin();
                 try {
                     this.membershipService.getMulticastHandler().close();
                 } catch (IOException e1) {
@@ -96,11 +95,12 @@ public class InitNodeState extends NodeState {
                 joinInitThread.join();
             } catch (InterruptedException e) {
                 this.membershipService.setNodeState(this);
+                this.membershipService.getMembershipCounter().rollbackJoin();
 
                 return MembershipRMI.Status.ERROR;
             }
 
-            this.membershipService.getMembershipCounter().incrementAndGet();
+            this.membershipService.getMembershipCounter().commitJoin();
             this.membershipService.setNodeState(new JoinedNodeState(this.membershipService));
         }
 

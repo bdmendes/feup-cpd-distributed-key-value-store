@@ -36,10 +36,16 @@ public class MembershipCounter {
         return c;
     }
 
-    public synchronized int decrementAndGet() {
-        int c = counter.decrementAndGet();
+    public int beginJoin() {
+        return counter.incrementAndGet();
+    }
+
+    public void commitJoin() {
         writeToFile();
-        return c;
+    }
+
+    public void rollbackJoin() {
+        counter.decrementAndGet();
     }
 
     private void readFromFile() {
