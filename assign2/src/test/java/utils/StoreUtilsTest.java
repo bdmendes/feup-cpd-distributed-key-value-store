@@ -3,12 +3,10 @@ package utils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.lang.reflect.Member;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class StoreUtilsTest {
     @Test
@@ -34,7 +32,7 @@ class StoreUtilsTest {
         membershipLog.put("node1", 1);
         membershipLog.put("node4", 0);
 
-        Map<String,Integer> mostRecentLog = membershipLog.getMostRecentLogs(3);
+        Map<String, Integer> mostRecentLog = membershipLog.getMostRecentLogs(3);
 
         assertEquals(3, mostRecentLog.size());
         assertEquals(1, mostRecentLog.get("node1"));

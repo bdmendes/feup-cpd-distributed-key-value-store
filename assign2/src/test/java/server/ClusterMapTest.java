@@ -6,7 +6,6 @@ import utils.ClusterMap;
 import utils.StoreUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -76,8 +75,8 @@ public class ClusterMapTest {
         Node node1 = new Node("127.0.0.1", 9002); // 12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0
         Node node2 = new Node("127.0.0.2", 9002);
 
-        assertEquals(Arrays.asList(node2), clusterMap2.getReplicationNodes(node1, 2));
-        assertEquals(Arrays.asList(node1), clusterMap2.getReplicationNodes(node2, 3));
+        assertEquals(List.of(node2), clusterMap2.getReplicationNodes(node1, 2));
+        assertEquals(List.of(node1), clusterMap2.getReplicationNodes(node2, 3));
     }
 
     @Test
