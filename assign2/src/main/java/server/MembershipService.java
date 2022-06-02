@@ -47,6 +47,7 @@ public class MembershipService implements MembershipRMI {
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
         this.membershipLog = new MembershipLog(getMembershipLogFilePath());
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
+        this.nodeState = new InitNodeState(this);
         this.messageReceiverTask = null;
     }
 
@@ -316,17 +317,17 @@ public class MembershipService implements MembershipRMI {
     }
 
     public void removeUnavailableNode(Node node) {
-        Integer nodeCounter = this.membershipLog.get(node.id());
-        boolean mustSend =  clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
+        boolean mustSendToNewSuccessor = clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
                 || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node);
 
+        Integer nodeCounter = this.membershipLog.get(node.id());
         if (nodeCounter != null) {
             this.membershipLog.put(node.id(), nodeCounter + 1);
         }
         this.clusterMap.remove(node);
         System.out.println(node + " is unavailable. Removed from cluster map");
 
-        if (mustSend) {
+        if (mustSendToNewSuccessor) {
             System.out.println("Updating key responsible nodes...");
             transferMyKeysToCurrentResponsibleNodes(false);
         }
