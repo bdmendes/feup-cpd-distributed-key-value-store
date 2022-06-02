@@ -13,6 +13,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 
 import static server.MembershipRMI.Status.OK;
 
@@ -190,7 +191,7 @@ public class JoinedNodeState extends NodeState {
         this.membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
         this.membershipService.getClusterMap().put(newNode);
 
-        this.membershipService.transferKeysToJoiningNode(newNode);
+        this.membershipService.transferMyKeysToNodes(Set.of(newNode));
         this.membershipService.orderJoiningNodeToDeleteMyTombstones(newNode);
 
         try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
@@ -352,7 +353,7 @@ public class JoinedNodeState extends NodeState {
 
             this.membershipService.getMembershipCounter().commitJoin();
             this.membershipService.getClusterMap().remove(this.storageService.getNode());
-            this.membershipService.transferMyKeysToCurrentResponsibleNodes(true);
+            this.membershipService.transferMyKeysToCurrentResponsibleNodes();
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();

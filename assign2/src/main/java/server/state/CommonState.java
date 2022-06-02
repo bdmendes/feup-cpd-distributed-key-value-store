@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public class CommonState {
     public static void processMembership(MembershipMessage membershipMessage, MembershipService membershipService) {
@@ -56,7 +57,7 @@ public class CommonState {
                     }
                     membershipService.getClusterMap().put(node.get());
                     if (membershipService.getNodeState().joined()) {
-                        membershipService.transferKeysToJoiningNode(node.get());
+                        membershipService.transferMyKeysToNodes(Set.of(node.get()));
                     }
                 } else {
                     membershipService.removeUnavailableNodeById(nodeId, false);

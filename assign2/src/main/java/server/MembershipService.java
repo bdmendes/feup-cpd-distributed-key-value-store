@@ -206,109 +206,57 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
-    public void transferKeysToJoiningNode(Node joiningNode) {
-        PutRelayMessage putMessage = new PutRelayMessage();
-        putMessage.setTransference(true);
+    public void transferMyKeysToCurrentResponsibleNodes() {
+        transferMyKeysToNodes(clusterMap.getNodes());
+    }
+
+    public void transferMyKeysToNodes(Set<Node> nodes) {
+        System.out.println("Transferring my keys to current responsible nodes...");
         List<String> successfulHashes = new ArrayList<>();
         final Map<String, Boolean> mustDeleteHash = new HashMap<>();
 
-        for (String hash : this.getStorageService().getHashes()) {
-            synchronized (getStorageService().getHashLock(hash)) {
-                List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
-                boolean mustCopyHash = responsibleNodes.contains(joiningNode);
-                if (!mustCopyHash) {
-                    continue;
-                }
-                mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
+        for (Node node : nodes) {
+            if(node.id().equals(storageService.getNode().id())) {
+                continue;
+            }
+            System.out.println("Transferring my keys to node " + node.id());
 
-                System.out.println("Transferring key " + hash + " to joining node " + joiningNode.id());
+            PutRelayMessage putMessage = new PutRelayMessage();
+            putMessage.setTransference(true);
 
-                try {
-                    File file = new File(this.getStorageService().getValueFilePath(hash));
-                    byte[] bytes = Files.readAllBytes(file.toPath());
-                    boolean full = putMessage.addValue(hash, bytes);
-
-                    if (full) {
-                        successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
-                        putMessage = new PutRelayMessage();
-                        putMessage.setTransference(true);
+            for (String hash : this.getStorageService().getHashes()) {
+                synchronized (getStorageService().getHashLock(hash)) {
+                    List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
+                    boolean mustCopyHash = responsibleNodes.contains(node);
+                    System.out.println("Must copy hash " + hash + "? " + mustCopyHash + " - " + node);
+                    if (!mustCopyHash) {
+                        continue;
                     }
-                } catch (IOException ignored) {
+                    mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
+
+                    System.out.println("Transferring key " + hash + " to joining node " + node.id());
+
+                    try {
+                        File file = new File(this.getStorageService().getValueFilePath(hash));
+                        byte[] bytes = Files.readAllBytes(file.toPath());
+                        boolean full = putMessage.addValue(hash, bytes);
+
+                        if (full) {
+                            successfulHashes.addAll(sendPutRelayMessageToNode(node, putMessage));
+                            putMessage = new PutRelayMessage();
+                            putMessage.setTransference(true);
+                        }
+                    } catch (IOException ignored) {
+                    }
                 }
             }
-        }
 
-        successfulHashes.addAll(sendPutRelayMessageToNode(joiningNode, putMessage));
+            successfulHashes.addAll(sendPutRelayMessageToNode(node, putMessage));
+        }
 
         for (String hash : successfulHashes) {
             if (mustDeleteHash.getOrDefault(hash, Boolean.FALSE)) {
                 this.getStorageService().delete(hash, false);
-            }
-        }
-    }
-
-    public void transferMyKeysToCurrentResponsibleNodes(boolean deleteLocally) {
-        System.out.println("Transferring my keys to current responsible nodes...");
-
-        Map<String, PutRelayMessage> putMessages = new HashMap<>();
-        List<String> successfulHashes = new ArrayList<>();
-
-        for (String hash : getStorageService().getHashes()) {
-            synchronized (getStorageService().getHashLock(hash)) {
-                try {
-                    File file = new File(getStorageService().getValueFilePath(hash));
-                    byte[] bytes = Files.readAllBytes(file.toPath());
-
-                    List<Node> responsibleNodes =
-                            clusterMap.getNodesResponsibleForHash(hash, MembershipService.REPLICATION_FACTOR + 1);
-                    for (Node node : responsibleNodes) {
-                        if (node.id().equals(getStorageService().getNode().id())) {
-                            continue;
-                        }
-
-                        PutRelayMessage putRelayMessage =
-                                putMessages.containsKey(node.id()) ?
-                                        putMessages.get(node.id()) : new PutRelayMessage();
-                        putRelayMessage.setTransference(true);
-
-                        boolean full = putRelayMessage.addValue(hash, bytes);
-
-                        if (full) {
-                            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(
-                                    node,
-                                    putRelayMessage,
-                                    null);
-                            putRelayMessage = new PutRelayMessage();
-                            putRelayMessage.setTransference(true);
-                            if (putReply == null) {
-                                this.removeUnavailableNode(node, true);
-                                return;
-                            }
-                            successfulHashes.addAll(putReply.getSuccessfulHashes());
-                        }
-
-                        putMessages.put(node.id(), putRelayMessage);
-                    }
-                } catch (IOException ignored) {
-                }
-            }
-        }
-
-        for (Map.Entry<String, PutRelayMessage> entry : putMessages.entrySet()) {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(
-                    this.clusterMap.getNodeFromId(entry.getKey()),
-                    entry.getValue(),
-                    null);
-            if (putReply == null) {
-                this.removeUnavailableNode(this.clusterMap.getNodeFromId(entry.getKey()), true);
-                return;
-            }
-            successfulHashes.addAll(putReply.getSuccessfulHashes());
-        }
-
-        if (deleteLocally) {
-            for (String deletedHash : successfulHashes) {
-                this.getStorageService().delete(deletedHash, false);
             }
         }
     }
@@ -334,7 +282,7 @@ public class MembershipService implements MembershipRMI {
 
         if (mustSendToNewSuccessor) {
             System.out.println("Updating key responsible nodes...");
-            transferMyKeysToCurrentResponsibleNodes(false);
+            transferMyKeysToCurrentResponsibleNodes();
         }
     }
 }
