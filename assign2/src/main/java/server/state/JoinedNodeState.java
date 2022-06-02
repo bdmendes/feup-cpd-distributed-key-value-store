@@ -54,7 +54,6 @@ public class JoinedNodeState extends NodeState {
                 .getNodesResponsibleForHash(getMessage.getKey(), MembershipService.REPLICATION_FACTOR);
 
         for (Node node : responsibleNodes) {
-            System.out.println(node.id());
             if (node.id().equals(this.storageService.getNode().id())
                     && this.storageService.getHashes().contains(getMessage.getKey())) {
                 replyValueFromStore(clientSocket, getMessage.getKey());
