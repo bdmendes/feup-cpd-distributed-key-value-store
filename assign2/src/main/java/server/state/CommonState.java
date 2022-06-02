@@ -26,7 +26,7 @@ public class CommonState {
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
                 membershipService.getClusterMap().put(node);
-                membershipService.transferKeysToJoiningNode(node);
+                if(membershipService.getNodeState().joined()) membershipService.transferKeysToJoiningNode(node);
             }
         }
 

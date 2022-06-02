@@ -317,14 +317,16 @@ public class MembershipService implements MembershipRMI {
 
     public void removeUnavailableNode(Node node) {
         Integer nodeCounter = this.membershipLog.get(node.id());
+        boolean mustSend =  clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
+                || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node);
+
         if (nodeCounter != null) {
             this.membershipLog.put(node.id(), nodeCounter + 1);
         }
         this.clusterMap.remove(node);
         System.out.println(node + " is unavailable. Removed from cluster map");
 
-        if (clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
-                || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node)) {
+        if (mustSend) {
             System.out.println("Updating key responsible nodes...");
             transferMyKeysToCurrentResponsibleNodes(false);
         }
