@@ -101,7 +101,7 @@ public class CommonState {
             deleted = membershipService.getStorageService().delete(deleteRelayMessage.getKey(), !deleteRelayMessage.isTransference());
         }
         System.out.println("Deleting hash " + deleteRelayMessage.getKey());
-        DeleteRelayReply response = new DeleteRelayReply();
+        DeleteReply response = new DeleteReply();
         response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
         CommunicationUtils.sendMessage(response, clientSocket);
     }

@@ -15,5 +15,4 @@ public enum MessageType {
     LEADER,
     GET_RELAY,
     DELETE_RELAY,
-    DELETE_RELAY_REPLY,
 }

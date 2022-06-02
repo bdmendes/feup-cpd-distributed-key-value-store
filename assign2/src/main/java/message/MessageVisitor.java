@@ -16,10 +16,6 @@ public interface MessageVisitor {
 
     }
 
-    default void processDeleteRelayReply(DeleteRelayReply deleteRelayReply, Socket socket) {
-
-    }
-
     default void processGet(GetMessage getMessage, Socket socket) {
 
     }

@@ -156,7 +156,7 @@ public class JoinedNodeState extends NodeState {
                 }
             } else {
                 System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to " + node);
-                DeleteRelayReply deleteRelayReply = (DeleteRelayReply)
+                DeleteReply deleteRelayReply = (DeleteReply)
                         CommunicationUtils.dispatchMessageToNode(node, deleteRelayMessage, null);
                 if (deleteRelayReply == null) {
                     this.membershipService.removeUnavailableNode(node, true);
