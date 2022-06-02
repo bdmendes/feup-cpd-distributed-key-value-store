@@ -232,11 +232,10 @@ public class MembershipService implements MembershipRMI {
 
                 for (Node node : nodes) {
                     boolean mustCopyHash = responsibleNodes.contains(node);
-                    System.out.println("Must copy hash " + hash + "? " + mustCopyHash + " - " + node);
                     if (!mustCopyHash) {
                         continue;
                     }
-                    if(node.id().equals(storageService.getNode().id())) {
+                    if (node.id().equals(storageService.getNode().id())) {
                         continue;
                     }
                     System.out.println("Transferring key " + hash + " to node " + node.id());
@@ -258,7 +257,7 @@ public class MembershipService implements MembershipRMI {
             }
         }
 
-        for(Map.Entry<String, PutRelayMessage> entry : putMessages.entrySet()) {
+        for (Map.Entry<String, PutRelayMessage> entry : putMessages.entrySet()) {
             successfulHashes.addAll(
                     sendPutRelayMessageToNode(
                             clusterMap.getNodeFromId(
