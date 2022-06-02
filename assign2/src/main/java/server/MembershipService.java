@@ -172,6 +172,7 @@ public class MembershipService implements MembershipRMI {
         while (true) {
             Node nextNode = getClusterMap().getNodeSuccessor(currentNode);
             if (!CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message)) {
+                removeUnavailableNode(nextNode);
                 currentNode = nextNode;
             } else {
                 return;
@@ -248,8 +249,8 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
-    public void transferAllMyKeysToNewSuccessors() {
-        System.out.println("Transferring all my keys to successors...");
+    public void transferMyKeysToCurrentResponsibleNodes(boolean deleteLocally) {
+        System.out.println("Transferring my keys to current responsible nodes...");
 
         Map<String, PutRelayMessage> putMessages = new HashMap<>();
         List<String> successfulHashes = new ArrayList<>();
@@ -260,7 +261,8 @@ public class MembershipService implements MembershipRMI {
                     File file = new File(getStorageService().getValueFilePath(hash));
                     byte[] bytes = Files.readAllBytes(file.toPath());
 
-                    List<Node> responsibleNodes = clusterMap.getNodesResponsibleForHash(hash, MembershipService.REPLICATION_FACTOR + 1);
+                    List<Node> responsibleNodes =
+                            clusterMap.getNodesResponsibleForHash(hash, MembershipService.REPLICATION_FACTOR + 1);
                     for (Node node : responsibleNodes) {
                         if (node.id().equals(getStorageService().getNode().id())) {
                             continue;
@@ -282,7 +284,6 @@ public class MembershipService implements MembershipRMI {
                             putRelayMessage.setTransference(true);
                             if (putReply == null) {
                                 this.removeUnavailableNode(node);
-                                transferAllMyKeysToNewSuccessors();
                                 return;
                             }
                             successfulHashes.addAll(putReply.getSuccessfulHashes());
@@ -302,14 +303,15 @@ public class MembershipService implements MembershipRMI {
                     null);
             if (putReply == null) {
                 this.removeUnavailableNode(this.clusterMap.getNodeFromId(entry.getKey()));
-                transferAllMyKeysToNewSuccessors();
                 return;
             }
             successfulHashes.addAll(putReply.getSuccessfulHashes());
         }
 
-        for (String deletedHash : successfulHashes) {
-            this.getStorageService().delete(deletedHash, false);
+        if (deleteLocally) {
+            for (String deletedHash : successfulHashes) {
+                this.getStorageService().delete(deletedHash, false);
+            }
         }
     }
 
@@ -320,5 +322,11 @@ public class MembershipService implements MembershipRMI {
         }
         this.clusterMap.remove(node);
         System.out.println(node + " is unavailable. Removed from cluster map");
+
+        if (clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
+                || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node)) {
+            System.out.println("Updating key responsible nodes...");
+            transferMyKeysToCurrentResponsibleNodes(false);
+        }
     }
 }

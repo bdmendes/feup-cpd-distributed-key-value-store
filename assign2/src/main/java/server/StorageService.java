@@ -95,12 +95,16 @@ public class StorageService {
     public synchronized void deleteTombstones() {
         tombstones.clear();
         File directory = new File(getTombstonesDirectory());
-        if (directory.exists()) {
-            File[] files = directory.listFiles();
-            if (null != files) {
-                for (File file : files) {
-                    file.delete();
-                }
+        if (!directory.exists()) {
+            return;
+        }
+        File[] files = directory.listFiles();
+        if (files == null) {
+            return;
+        }
+        for (File file : files) {
+            if (!file.delete()) {
+                return;
             }
         }
     }

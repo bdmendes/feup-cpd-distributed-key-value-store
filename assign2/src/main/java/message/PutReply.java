@@ -4,7 +4,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PutReply extends ReplyKeyMessage {
+public class PutReply extends KeyMessage {
 
     public PutReply(String headers) {
         Map<String, String> fields = decodeFields(headers);

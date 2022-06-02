@@ -2,9 +2,12 @@ package client;
 
 import message.*;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class ClientMessageVisitor implements MessageVisitor {
     @Override
@@ -36,8 +39,20 @@ public class ClientMessageVisitor implements MessageVisitor {
     public void processGetReply(GetReply getReply, Socket socket) {
         if (getReply.getStatusCode() == StatusCode.OK) {
             System.out.println("GET SUCCESS FOR " + getReply.getKey());
-            System.out.println("VALUE:");
+            System.out.println("TEXT VALUE:");
             System.out.println(new String(getReply.getValue(), StandardCharsets.UTF_8));
+
+            try {
+                Files.createDirectories(Paths.get("client_downloads"));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            try (FileOutputStream fileWriter = new FileOutputStream("./client_downloads/" + getReply.getKey(), false)) {
+                fileWriter.write(getReply.getValue());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         } else {
             System.out.println("GET FAILURE: " + getReply.getStatusCode());
         }
@@ -62,8 +77,7 @@ public class ClientMessageVisitor implements MessageVisitor {
     }
 
     @Override
-    public void process(Message message, Socket socket) throws IOException {
-        System.out.println(message.getClass());
+    public void process(Message message, Socket socket) {
         message.accept(this, socket);
     }
 

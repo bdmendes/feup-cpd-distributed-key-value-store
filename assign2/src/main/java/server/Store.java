@@ -17,13 +17,17 @@ public class Store {
         File directory = new File(storageService.getStorageDirectory());
         if (directory.exists()) {
             File[] files = directory.listFiles();
-            if (null != files) {
-                for (File file : files) {
-                    file.delete();
+            if (files == null) {
+                return false;
+            }
+            for (File file : files) {
+                if (!file.delete()) {
+                    return false;
                 }
             }
+            return directory.delete();
         }
-        return directory.delete();
+        return false;
     }
 
     public static void bindRmiMethods(MembershipService membershipService) {

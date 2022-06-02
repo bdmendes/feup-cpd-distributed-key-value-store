@@ -16,13 +16,15 @@ class StorageServiceTest {
         File directory = new File(storageService.getValueFilesDirectory());
         if (directory.exists()) {
             File[] files = directory.listFiles();
-            if (null != files) {
-                for (File file : files) {
-                    file.delete();
+            if (files == null) {
+                return;
+            }
+            for (File file : files) {
+                if (!file.delete()) {
+                    return;
                 }
             }
         }
-        directory.delete();
     }
 
     @Test

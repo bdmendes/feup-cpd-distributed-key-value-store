@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DeleteRelayReply extends ReplyMessage {
+public class DeleteRelayReply extends StatusMessage {
     final List<String> successfulHashes;
 
     public DeleteRelayReply(String headers) {
