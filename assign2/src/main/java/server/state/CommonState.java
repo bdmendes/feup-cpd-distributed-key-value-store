@@ -101,7 +101,6 @@ public class CommonState {
         }
         System.out.println("Deleting hash " + deleteRelayMessage.getKey());
         DeleteRelayReply response = new DeleteRelayReply();
-        response.reportSuccess(deleteRelayMessage.getKey());
         response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
         CommunicationUtils.sendMessage(response, clientSocket);
     }

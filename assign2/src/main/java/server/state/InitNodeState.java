@@ -35,7 +35,7 @@ public class InitNodeState extends NodeState {
     public MembershipRMI.Status join() {
         synchronized (this.membershipService.joinLeaveLock) {
             if (this.membershipService.isJoined()) {
-                if(this.membershipService.getNodeState().joined()) {
+                if (this.membershipService.getNodeState().joined()) {
                     return MembershipRMI.Status.ALREADY_JOINED;
                 }
 

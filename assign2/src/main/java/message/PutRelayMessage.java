@@ -26,12 +26,12 @@ public class PutRelayMessage extends Message {
         parseValues(data);
     }
 
-    public void setTransference(boolean transference) {
-        this.transference = transference;
-    }
-
     public boolean isTransference() {
         return this.transference;
+    }
+
+    public void setTransference(boolean transference) {
+        this.transference = transference;
     }
 
     /**

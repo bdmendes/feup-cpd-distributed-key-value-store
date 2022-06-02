@@ -57,16 +57,6 @@ public class ClusterMap {
         return this.getNodeSuccessor(nodeHash);
     }
 
-    public List<Node> getNodeSuccessors(Node node, int replicationFactor) {
-        String nodeHash = StoreUtils.sha256(node.id().getBytes(StandardCharsets.UTF_8));
-        return this.getNodeSuccessors(nodeHash, replicationFactor);
-    }
-
-    public Node getNodeSuccessorById(String nodeId) {
-        String nodeHash = StoreUtils.sha256(nodeId.getBytes(StandardCharsets.UTF_8));
-        return this.getNodeSuccessor(nodeHash);
-    }
-
     public Node getNodeResponsibleForHash(String hash) {
         return this.getNodeSuccessor(hash);
     }

@@ -26,12 +26,12 @@ public class ClientMessageVisitor implements MessageVisitor {
     }
 
     @Override
-    public void processMembership(MembershipMessage membershipMessage, Socket socket) {
+    public void processMembership(MembershipMessage membershipMessage) {
 
     }
 
     @Override
-    public void processJoin(JoinMessage joinMessage, Socket socket) {
+    public void processJoin(JoinMessage joinMessage) {
 
     }
 
@@ -82,10 +82,10 @@ public class ClientMessageVisitor implements MessageVisitor {
     }
 
     @Override
-    public void processElection(ElectionMessage electionMessage, Socket socket) {
+    public void processElection(ElectionMessage electionMessage) {
     }
 
     @Override
-    public void processLeader(LeaderMessage leaderMessage, Socket socket) {
+    public void processLeader(LeaderMessage leaderMessage) {
     }
 }

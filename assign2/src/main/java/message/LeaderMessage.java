@@ -27,7 +27,7 @@ public class LeaderMessage extends Message {
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) {
-        visitor.processLeader(this, socket);
+        visitor.processLeader(this);
     }
 
     public String getLeaderNode() {

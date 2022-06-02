@@ -6,38 +6,27 @@ import java.util.Map;
 
 public class GetRelayMessage extends Message {
     private String key;
-    private String target;
-    private byte[] value;
 
-    public GetRelayMessage() {}
+    public GetRelayMessage() {
+    }
 
     public GetRelayMessage(String headers) {
         Map<String, String> fields = decodeFields(headers);
         key = fields.get("key");
-        target = fields.get("target");
-    }
-
-    public void setKey(String key) {
-        this.key = key;
     }
 
     public String getKey() {
         return key;
     }
 
-    public String getTarget() {
-        return target;
-    }
-
-    public void setTarget(String target) {
-        this.target = target;
+    public void setKey(String key) {
+        this.key = key;
     }
 
     @Override
     public byte[] encode() {
         HashMap<String, String> fields = new HashMap<>();
         fields.put("key", key);
-        fields.put("target", target);
         return encodeWithFields(MessageType.GET_RELAY, fields, new byte[0]);
     }
 

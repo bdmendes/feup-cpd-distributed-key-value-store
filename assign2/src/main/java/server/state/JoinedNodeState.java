@@ -61,7 +61,6 @@ public class JoinedNodeState extends NodeState {
             } else {
                 GetRelayMessage getRelayMessage = new GetRelayMessage();
                 getRelayMessage.setKey(getMessage.getKey());
-                getRelayMessage.setTarget(node.id());
                 try {
                     GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNode(node, getRelayMessage, null);
                     if (message == null) {
@@ -173,7 +172,7 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processMembership(MembershipMessage membershipMessage, Socket socket) {
+    public void processMembership(MembershipMessage membershipMessage) {
         CommonState.processMembership(membershipMessage, this.membershipService);
     }
 
@@ -233,7 +232,7 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processJoin(JoinMessage joinMessage, Socket dummy) {
+    public void processJoin(JoinMessage joinMessage) {
         if (joinMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
             return;
         }
@@ -261,7 +260,7 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processElection(ElectionMessage electionMessage, Socket socket) {
+    public void processElection(ElectionMessage electionMessage) {
         Map<String, Integer> incomingMembershipLog = electionMessage.getMembershipLog();
         String origin = electionMessage.getOrigin();
 
@@ -301,7 +300,7 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processLeader(LeaderMessage leaderMessage, Socket socket) {
+    public void processLeader(LeaderMessage leaderMessage) {
         if (leaderMessage.getLeaderNode().equals(membershipService.getStorageService().getNode().id())) {
             System.out.println(membershipService.getStorageService().getNode().id() + " is leader.");
             return;
@@ -352,6 +351,7 @@ public class JoinedNodeState extends NodeState {
             }
 
             this.membershipService.getMembershipCounter().commitJoin();
+            this.membershipService.getClusterMap().remove(this.storageService.getNode());
             this.membershipService.transferMyKeysToCurrentResponsibleNodes(true);
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();

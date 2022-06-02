@@ -65,6 +65,6 @@ public class JoinMessage extends Message {
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) {
-        visitor.processJoin(this, socket);
+        visitor.processJoin(this);
     }
 }

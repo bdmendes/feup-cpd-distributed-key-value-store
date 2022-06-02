@@ -17,12 +17,12 @@ public class DeleteRelayMessage extends KeyMessage {
 
     }
 
-    public void setTransference(boolean transference) {
-        this.transference = transference;
-    }
-
     public boolean isTransference() {
         return this.transference;
+    }
+
+    public void setTransference(boolean transference) {
+        this.transference = transference;
     }
 
     @Override

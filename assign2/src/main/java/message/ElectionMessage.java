@@ -33,7 +33,7 @@ public class ElectionMessage extends Message {
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) {
-        visitor.processElection(this, socket);
+        visitor.processElection(this);
     }
 
     public Map<String, Integer> getMembershipLog() {

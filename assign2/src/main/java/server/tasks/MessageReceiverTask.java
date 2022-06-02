@@ -18,8 +18,8 @@ import java.util.concurrent.TimeUnit;
 public class MessageReceiverTask implements Runnable {
     private final ServerSocket serverSocket;
     private final MembershipService membershipService;
-    private ExecutorService executorService;
     private final boolean running;
+    private ExecutorService executorService;
 
     public MessageReceiverTask(MembershipService membershipService, ServerSocket serverSocket) {
         this.serverSocket = serverSocket;

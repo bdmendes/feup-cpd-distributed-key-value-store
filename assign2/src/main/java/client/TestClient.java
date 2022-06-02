@@ -170,7 +170,7 @@ public class TestClient {
     }
 
     private record ClientArgs(String host, String operation, String operand) {
-        public ClientArgs(String host, String operation) {
+        private ClientArgs(String host, String operation) {
             this(host, operation, null);
         }
     }
