@@ -53,6 +53,7 @@ public class JoinedNodeState extends NodeState {
                 .getNodesResponsibleForHash(getMessage.getKey(), MembershipService.REPLICATION_FACTOR);
 
         for (Node node : responsibleNodes) {
+            System.out.println(node.id());
             if (node.id().equals(this.storageService.getNode().id())
                     && this.storageService.getHashes().contains(getMessage.getKey())) {
                 replyValueFromStore(clientSocket, getMessage.getKey());
@@ -266,7 +267,7 @@ public class JoinedNodeState extends NodeState {
 
         Node currentNode = membershipService.getStorageService().getNode();
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
-        System.out.println("Received election message from: " + origin + "; dispatching to next node: " + nextNode);
+        System.out.println("Received election message from: " + origin + ";");
         if (origin.equals(currentNode.id())) {
             membershipService.setLeader(true);
             LeaderMessage message = new LeaderMessage();
@@ -288,10 +289,13 @@ public class JoinedNodeState extends NodeState {
 
                     return subtotal + current - element.getValue();
                 }, Integer::sum);
+        System.out.println("Membership difference: " + membershipDifference);
+        System.out.println("Current node: " + currentNode.id().compareTo(origin));
 
-        if (membershipDifference <= 0 && currentNode.id().compareTo(origin) <= 0) {
+        if (membershipDifference <= 0 || currentNode.id().compareTo(origin) <= 0) {
             return;
         }
+        System.out.println("dispatching to next node: " + nextNode);
 
         this.membershipService.sendToNextAvailableNode(electionMessage);
     }
