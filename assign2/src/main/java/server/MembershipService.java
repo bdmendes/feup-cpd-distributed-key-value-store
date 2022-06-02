@@ -124,9 +124,9 @@ public class MembershipService implements MembershipRMI {
         return membershipLog;
     }
 
-    public JoinMessage createJoinMessage(int port) {
+    public JoinMessage createJoinMessage(int port, int counter) {
         JoinMessage joinMessage = new JoinMessage();
-        joinMessage.setCounter(nodeMembershipCounter.get());
+        joinMessage.setCounter(counter);
         joinMessage.setNodeId(storageService.getNode().id());
         joinMessage.setConnectionPort(port);
         joinMessage.setPort(storageService.getNode().port());

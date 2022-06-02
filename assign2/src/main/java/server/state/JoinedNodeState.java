@@ -330,9 +330,10 @@ public class JoinedNodeState extends NodeState {
             }
 
             try {
-                this.membershipService.getMembershipCounter().incrementAndGet();
-                JoinMessage message = this.membershipService.createJoinMessage(-1);
+                int counter = this.membershipService.getMembershipCounter().get();
+                counter++;
 
+                JoinMessage message = this.membershipService.createJoinMessage(-1, counter);
                 this.membershipService.getMulticastHandler().sendMessage(message);
             } catch (IOException e) {
                 e.printStackTrace();
@@ -346,6 +347,7 @@ public class JoinedNodeState extends NodeState {
                 e.printStackTrace();
             }
 
+            this.membershipService.getMembershipCounter().incrementAndGet();
             this.membershipService.transferAllMyKeysToNewSuccessors();
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
