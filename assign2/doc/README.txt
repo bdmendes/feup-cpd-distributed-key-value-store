@@ -1,3 +1,5 @@
+All the following commands should be run from the assign2/ directory.
+
 #### HOW TO COMPILE ####:
 
 In the root directory of the project, run ONLY ONE of the following commands:
