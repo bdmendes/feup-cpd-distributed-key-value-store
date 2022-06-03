@@ -39,10 +39,6 @@ public class MembershipMessage extends Message {
         this.nodes = nodes;
     }
 
-    public void addNode(Node node) {
-        this.nodes.add(node);
-    }
-
     public Map<String, Integer> getMembershipLog() {
         return membershipLog;
     }
@@ -74,7 +70,7 @@ public class MembershipMessage extends Message {
 
     @Override
     public void accept(MessageVisitor visitor, Socket socket) {
-        visitor.processMembership(this, socket);
+        visitor.processMembership(this);
     }
 
     @Override

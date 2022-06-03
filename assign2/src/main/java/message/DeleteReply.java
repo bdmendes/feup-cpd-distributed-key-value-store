@@ -4,7 +4,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class DeleteReply extends ReplyKeyMessage {
+public class DeleteReply extends KeyMessage {
 
     public DeleteReply(String headers) {
         Map<String, String> fields = decodeFields(headers);

@@ -110,6 +110,8 @@ public class JoinInitTask implements Runnable {
         System.out.println("Received " + received + " messages");
         System.out.println(this.membershipService.getClusterMap().getNodes());
         System.out.println(this.membershipService.getMembershipLog(32));
+        
+        this.membershipService.transferMyKeysToCurrentResponsibleNodes();
 
         try {
             this.close();

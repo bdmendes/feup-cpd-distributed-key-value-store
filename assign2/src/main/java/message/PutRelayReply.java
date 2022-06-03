@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class PutRelayReply extends ReplyMessage {
+public class PutRelayReply extends StatusMessage {
     final List<String> successfulHashes;
 
     public PutRelayReply(String headers) {

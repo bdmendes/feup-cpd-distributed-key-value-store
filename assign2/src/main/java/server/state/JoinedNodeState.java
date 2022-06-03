@@ -2,6 +2,7 @@ package server.state;
 
 import communication.CommunicationUtils;
 import message.*;
+import server.MembershipRMI;
 import server.MembershipService;
 import server.Node;
 import utils.MembershipLog;
@@ -9,8 +10,12 @@ import utils.MembershipLog;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
+
+import static server.MembershipRMI.Status.OK;
 
 public class JoinedNodeState extends NodeState {
     public JoinedNodeState(MembershipService membershipService) {
@@ -20,71 +25,101 @@ public class JoinedNodeState extends NodeState {
         multicastHandlerThread.start();
     }
 
-    private void sendNodeDownMessage(ReplyKeyMessage response, String key, Socket clientSocket) {
+    private void replyValueFromStore(Socket socket, String key) {
+        GetReply response = new GetReply();
         response.setKey(key);
-        response.setStatusCode(StatusCode.NODE_IS_DOWN);
-        CommunicationUtils.sendMessage(response, clientSocket);
+        try {
+            byte[] value;
+            synchronized (storageService.getHashLock(key)) {
+                value = membershipService.getStorageService().get(key);
+            }
+            response.setValue(value);
+            response.setStatusCode(StatusCode.OK);
+            System.out.println("Getting hash " + key);
+        } catch (IOException e) {
+            System.out.println(e.getMessage());
+            response.setStatusCode(StatusCode.FILE_NOT_FOUND);
+        }
+        CommunicationUtils.sendMessage(response, socket);
+    }
+
+    @Override
+    public void processGetRelay(GetRelayMessage getRelayMessage, Socket clientSocket) {
+        replyValueFromStore(clientSocket, getRelayMessage.getKey());
     }
 
     @Override
     public void processGet(GetMessage getMessage, Socket clientSocket) {
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(getMessage.getKey());
-        if (responsibleNode == null) {
-            CommunicationUtils.sendErrorResponse(new GetReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, getMessage.getKey(), clientSocket);
-            return;
+        List<Node> responsibleNodes = this.membershipService.getClusterMap()
+                .getNodesResponsibleForHash(getMessage.getKey(), MembershipService.REPLICATION_FACTOR);
+
+        for (Node node : responsibleNodes) {
+            if (node.id().equals(this.storageService.getNode().id())
+                    && this.storageService.getHashes().contains(getMessage.getKey())) {
+                replyValueFromStore(clientSocket, getMessage.getKey());
+                return;
+            } else {
+                GetRelayMessage getRelayMessage = new GetRelayMessage();
+                getRelayMessage.setKey(getMessage.getKey());
+                try {
+                    GetReply message = (GetReply) CommunicationUtils.dispatchMessageToNode(node, getRelayMessage, null);
+                    if (message == null) {
+                        this.membershipService.removeUnavailableNode(node, true);
+                        processGet(getMessage, clientSocket);
+                        return;
+                    }
+                    if (!message.getStatusCode().equals(StatusCode.OK)) {
+                        continue;
+                    }
+                    System.out.println("Successfully GET from replicated node " + node);
+                    CommunicationUtils.sendMessage(message, clientSocket);
+                    return;
+                } catch (Exception ignored) {
+                }
+            }
         }
 
-        // TODO: Handle replication
-        if (this.membershipService.getStorageService().getHashes().contains(getMessage.getKey())
-                || responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            GetReply response = new GetReply();
-            response.setKey(getMessage.getKey());
-            try {
-                byte[] value = membershipService.getStorageService().get(getMessage.getKey());
-                response.setValue(value);
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.FILE_NOT_FOUND);
-            }
-            System.out.println("Getting hash " + getMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
-            System.out.println("Dispatching get request for hash " + getMessage.getKey() + " to node " + responsibleNode);
-            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, getMessage, clientSocket) == null) {
-                this.membershipService.removeUnavailableNode(responsibleNode);
-                this.sendNodeDownMessage(new GetReply(), getMessage.getKey(), clientSocket);
-            }
-        }
+        CommunicationUtils.sendErrorResponse(new GetReply(), StatusCode.FILE_NOT_FOUND, getMessage.getKey(), clientSocket);
     }
 
     @Override
     public void processPut(PutMessage putMessage, Socket clientSocket) {
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(putMessage.getKey());
-        if (responsibleNode == null) {
-            CommunicationUtils.sendErrorResponse(new PutReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, putMessage.getKey(), clientSocket);
-            return;
+        List<Node> responsibleNodes = this.membershipService.getClusterMap()
+                .getNodesResponsibleForHash(putMessage.getKey(), MembershipService.REPLICATION_FACTOR);
+
+        PutRelayMessage putRelayMessage = new PutRelayMessage();
+        putRelayMessage.addValue(putMessage.getKey(), putMessage.getValue());
+
+        PutReply response = new PutReply();
+        response.setKey(putMessage.getKey());
+
+        for (Node node : responsibleNodes) {
+            if (node.id().equals(this.storageService.getNode().id())) {
+                try {
+                    membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
+                    response.setStatusCode(StatusCode.OK);
+                } catch (IOException e) {
+                    response.setStatusCode(StatusCode.ERROR);
+                }
+                System.out.println("Putting hash " + putMessage.getKey());
+            } else {
+                System.out.println("Dispatching put replication request for hash " + putMessage.getKey() + " to " + node);
+                PutRelayReply putRelayReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putRelayMessage, null);
+                if (putRelayReply == null) {
+                    this.membershipService.removeUnavailableNode(node, true);
+                    processPut(putMessage, clientSocket);
+                    return;
+                }
+                if (!putRelayReply.getStatusCode().equals(StatusCode.OK)) {
+                    continue;
+                }
+                if (response.getStatusCode() != StatusCode.OK) {
+                    response.setStatusCode(putRelayReply.getStatusCode());
+                }
+            }
         }
 
-        // TODO: Handle replication
-        if (responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            PutReply response = new PutReply();
-            response.setKey(putMessage.getKey());
-            try {
-                membershipService.getStorageService().put(putMessage.getKey(), putMessage.getValue());
-                response.setStatusCode(StatusCode.OK);
-            } catch (IOException e) {
-                response.setStatusCode(StatusCode.ERROR);
-            }
-            System.out.println("Putting hash " + putMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
-            System.out.println("Dispatching put request for hash " + putMessage.getKey() + " to node " + responsibleNode);
-            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, putMessage, clientSocket) == null) {
-                // TODO: put on down node successor
-                this.membershipService.removeUnavailableNode(responsibleNode);
-                this.sendNodeDownMessage(new PutReply(), putMessage.getKey(), clientSocket);
-            }
-        }
+        CommunicationUtils.sendMessage(response, clientSocket);
     }
 
     @Override
@@ -93,33 +128,51 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processDelete(DeleteMessage deleteMessage, Socket clientSocket) {
-        Node responsibleNode = this.membershipService.getClusterMap().getNodeResponsibleForHash(deleteMessage.getKey());
-        if (responsibleNode == null) {
-            CommunicationUtils.sendErrorResponse(new DeleteReply(), StatusCode.UNKNOWN_CLUSTER_VIEW, deleteMessage.getKey(), clientSocket);
-            return;
-        }
-
-        // TODO: Handle replication
-        if (this.membershipService.getStorageService().getHashes().contains(deleteMessage.getKey())
-                || responsibleNode.equals(this.membershipService.getStorageService().getNode())) {
-            boolean deleted = membershipService.getStorageService().delete(deleteMessage.getKey());
-            DeleteReply response = new DeleteReply();
-            response.setKey(deleteMessage.getKey());
-            response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
-            System.out.println("Deleting hash " + deleteMessage.getKey());
-            CommunicationUtils.sendMessage(response, clientSocket);
-        } else {
-            System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to node " + responsibleNode);
-            if (CommunicationUtils.dispatchMessageToNode(responsibleNode, deleteMessage, clientSocket) == null) {
-                this.membershipService.removeUnavailableNode(responsibleNode);
-                this.sendNodeDownMessage(new DeleteReply(), deleteMessage.getKey(), clientSocket);
-            }
-        }
+    public void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket) {
+        CommonState.processDeleteRelay(deleteRelayMessage, clientSocket, this.membershipService);
     }
 
     @Override
-    public void processMembership(MembershipMessage membershipMessage, Socket socket) {
+    public void processDelete(DeleteMessage deleteMessage, Socket clientSocket) {
+        List<Node> responsibleNodes = this.membershipService.getClusterMap()
+                .getNodesResponsibleForHash(deleteMessage.getKey(), MembershipService.REPLICATION_FACTOR);
+
+        DeleteRelayMessage deleteRelayMessage = new DeleteRelayMessage();
+        deleteRelayMessage.setKey(deleteMessage.getKey());
+
+        DeleteReply response = new DeleteReply();
+        response.setKey(deleteMessage.getKey());
+
+        for (Node node : responsibleNodes) {
+            if (node.id().equals(this.storageService.getNode().id())) {
+                boolean deleted;
+                synchronized (storageService.getHashLock(deleteMessage.getKey())) {
+                    deleted = membershipService.getStorageService().delete(deleteMessage.getKey(), true);
+                }
+                System.out.println("Deleting hash " + deleteMessage.getKey());
+                if (response.getStatusCode() != StatusCode.OK) {
+                    response.setStatusCode(deleted ? StatusCode.OK : StatusCode.FILE_NOT_FOUND);
+                }
+            } else {
+                System.out.println("Dispatching delete request for hash " + deleteMessage.getKey() + " to " + node);
+                DeleteReply deleteRelayReply = (DeleteReply)
+                        CommunicationUtils.dispatchMessageToNode(node, deleteRelayMessage, null);
+                if (deleteRelayReply == null) {
+                    this.membershipService.removeUnavailableNode(node, true);
+                    processDelete(deleteMessage, clientSocket);
+                    return;
+                }
+                if (response.getStatusCode() != StatusCode.OK) {
+                    response.setStatusCode(deleteRelayReply.getStatusCode());
+                }
+            }
+        }
+
+        CommunicationUtils.sendMessage(response, clientSocket);
+    }
+
+    @Override
+    public void processMembership(MembershipMessage membershipMessage) {
         CommonState.processMembership(membershipMessage, this.membershipService);
     }
 
@@ -136,6 +189,9 @@ public class JoinedNodeState extends NodeState {
         Node newNode = new Node(joinMessage.getNodeId(), joinMessage.getPort());
         this.membershipService.getMembershipLog().put(joinMessage.getNodeId(), joinMessage.getCounter());
         this.membershipService.getClusterMap().put(newNode);
+
+        this.membershipService.transferMyKeysToNodes(Set.of(newNode));
+        this.membershipService.orderJoiningNodeToDeleteMyTombstones(newNode);
 
         try (Socket otherNode = new Socket(InetAddress.getByName(joinMessage.getNodeId()), joinMessage.getConnectionPort())) {
             Thread.sleep(new Random().nextInt(1200));
@@ -160,11 +216,6 @@ public class JoinedNodeState extends NodeState {
             );
 
             System.out.println("sent membership message to " + joinMessage.getNodeId());
-
-            if (membershipService.getClusterMap().getNodeSuccessorById(joinMessage.getNodeId())
-                    .equals(membershipService.getStorageService().getNode())) {
-                this.membershipService.transferKeysToJoiningNode(newNode);
-            }
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
@@ -181,7 +232,7 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processJoin(JoinMessage joinMessage, Socket dummy) {
+    public void processJoin(JoinMessage joinMessage) {
         if (joinMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
             return;
         }
@@ -209,13 +260,13 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public void processElection(ElectionMessage electionMessage, Socket socket) {
+    public void processElection(ElectionMessage electionMessage) {
         Map<String, Integer> incomingMembershipLog = electionMessage.getMembershipLog();
         String origin = electionMessage.getOrigin();
 
         Node currentNode = membershipService.getStorageService().getNode();
         Node nextNode = membershipService.getClusterMap().getNodeSuccessor(currentNode);
-        System.out.println("Received election message from: " + origin + "; dispatching to next node: " + nextNode);
+        System.out.println("Received election message from: " + origin + ";");
         if (origin.equals(currentNode.id())) {
             membershipService.setLeader(true);
             LeaderMessage message = new LeaderMessage();
@@ -238,15 +289,18 @@ public class JoinedNodeState extends NodeState {
                     return subtotal + current - element.getValue();
                 }, Integer::sum);
 
-        if (membershipDifference <= 0 && currentNode.id().compareTo(origin) <= 0) {
+        if (membershipDifference > 0) {
+            return;
+        } else if (membershipDifference == 0 && currentNode.id().compareTo(origin) < 0) {
             return;
         }
+        System.out.println("dispatching to next node: " + nextNode);
 
         this.membershipService.sendToNextAvailableNode(electionMessage);
     }
 
     @Override
-    public void processLeader(LeaderMessage leaderMessage, Socket socket) {
+    public void processLeader(LeaderMessage leaderMessage) {
         if (leaderMessage.getLeaderNode().equals(membershipService.getStorageService().getNode().id())) {
             System.out.println(membershipService.getStorageService().getNode().id() + " is leader.");
             return;
@@ -258,15 +312,15 @@ public class JoinedNodeState extends NodeState {
     }
 
     @Override
-    public boolean join() {
-        return true;
+    public MembershipRMI.Status join() {
+        return MembershipRMI.Status.ALREADY_JOINED;
     }
 
     @Override
-    public boolean leave() {
+    public MembershipRMI.Status leave() {
         synchronized (this.membershipService.joinLeaveLock) {
             if (!this.membershipService.isJoined()) {
-                return true;
+                return MembershipRMI.Status.ALREADY_LEFT;
             }
 
             this.membershipService.setNodeState(new InitNodeState(this.membershipService));
@@ -278,14 +332,15 @@ public class JoinedNodeState extends NodeState {
             }
 
             try {
-                this.membershipService.getMembershipCounter().incrementAndGet();
-                JoinMessage message = this.membershipService.createJoinMessage(-1);
+                int counter = this.membershipService.getMembershipCounter().beginJoin();
+                JoinMessage message = this.membershipService.createJoinMessage(-1, counter);
 
                 this.membershipService.getMulticastHandler().sendMessage(message);
             } catch (IOException e) {
                 e.printStackTrace();
                 this.membershipService.setNodeState(this);
-                return false;
+                this.membershipService.getMembershipCounter().rollbackJoin();
+                return MembershipRMI.Status.ERROR;
             }
 
             try {
@@ -294,15 +349,18 @@ public class JoinedNodeState extends NodeState {
                 e.printStackTrace();
             }
 
-            this.membershipService.transferAllMyKeysToMySuccessor();
+            this.membershipService.getMembershipCounter().commitJoin();
+            this.membershipService.getClusterMap().remove(this.storageService.getNode());
+            this.membershipService.transferMyKeysToCurrentResponsibleNodes();
             this.membershipService.setLeader(false);
             this.membershipService.getClusterMap().clear();
             this.membershipService.getMembershipLog().clear();
+            this.membershipService.getStorageService().deleteTombstones();
 
             System.out.println("Left cluster");
         }
 
-        return true;
+        return OK;
     }
 
     @Override

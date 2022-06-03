@@ -3,29 +3,29 @@ package server;
 import communication.CommunicationUtils;
 import communication.IPAddress;
 import communication.MulticastHandler;
-import message.JoinMessage;
-import message.Message;
-import message.PutRelayMessage;
-import message.PutRelayReply;
+import message.*;
 import server.state.InitNodeState;
 import server.state.NodeState;
 import server.tasks.ElectionTask;
 import server.tasks.MembershipTask;
 import server.tasks.MessageReceiverTask;
-import utils.*;
+import utils.ClusterMap;
+import utils.MembershipCounter;
+import utils.MembershipLog;
+import utils.SentMemberships;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.ServerSocket;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class MembershipService implements MembershipRMI {
+    public static final int REPLICATION_FACTOR = 3;
     public final Object joinLeaveLock = new Object();
     private final StorageService storageService;
     private final MembershipCounter nodeMembershipCounter;
@@ -44,6 +44,7 @@ public class MembershipService implements MembershipRMI {
         this.nodeMembershipCounter = new MembershipCounter(getMembershipCounterFilePath());
         this.membershipLog = new MembershipLog(getMembershipLogFilePath());
         this.clusterMap = new ClusterMap(getClusterMapFilePath());
+        this.nodeState = new InitNodeState(this);
         this.messageReceiverTask = null;
     }
 
@@ -121,9 +122,9 @@ public class MembershipService implements MembershipRMI {
         return membershipLog;
     }
 
-    public JoinMessage createJoinMessage(int port) {
+    public JoinMessage createJoinMessage(int port, int counter) {
         JoinMessage joinMessage = new JoinMessage();
-        joinMessage.setCounter(nodeMembershipCounter.get());
+        joinMessage.setCounter(counter);
         joinMessage.setNodeId(storageService.getNode().id());
         joinMessage.setConnectionPort(port);
         joinMessage.setPort(storageService.getNode().port());
@@ -131,12 +132,12 @@ public class MembershipService implements MembershipRMI {
     }
 
     @Override
-    public boolean join() {
+    public MembershipRMI.Status join() {
         return nodeState.join();
     }
 
     @Override
-    public boolean leave() {
+    public MembershipRMI.Status leave() {
         return nodeState.leave();
     }
 
@@ -169,6 +170,7 @@ public class MembershipService implements MembershipRMI {
         while (true) {
             Node nextNode = getClusterMap().getNodeSuccessor(currentNode);
             if (!CommunicationUtils.dispatchMessageToNodeWithoutReply(nextNode, message)) {
+                removeUnavailableNode(nextNode, true);
                 currentNode = nextNode;
             } else {
                 return;
@@ -176,84 +178,125 @@ public class MembershipService implements MembershipRMI {
         }
     }
 
-    public void transferKeysToJoiningNode(Node joiningNode) {
-        String joiningNodeHash = StoreUtils.sha256(joiningNode.id().getBytes(StandardCharsets.UTF_8));
-        String thisNodeHash = StoreUtils.sha256(this.getStorageService()
-                .getNode().id().getBytes(StandardCharsets.UTF_8));
-        PutRelayMessage putMessage = new PutRelayMessage();
-
-        for (String hash : this.getStorageService().getHashes()) {
-            boolean hashIsLessThanJoiningNode = hash.compareTo(joiningNodeHash) <= 0;
-            boolean hashIsHigherThanThisNode = hash.compareTo(thisNodeHash) >= 0;
-            boolean mustTransferHash =
-                    joiningNodeHash.compareTo(thisNodeHash) < 0
-                            ? hashIsLessThanJoiningNode || hashIsHigherThanThisNode
-                            : hashIsLessThanJoiningNode && hashIsHigherThanThisNode;
-
-            if (!mustTransferHash) {
-                continue;
-            }
-            System.out.println("Transferring key " + hash + " to joining node " + joiningNode.id());
-
-            try {
-                File file = new File(this.getStorageService().getValueFilePath(hash));
-                byte[] bytes = Files.readAllBytes(file.toPath());
-                putMessage.addValue(hash, bytes);
-            } catch (IOException e) {
-                throw new IllegalArgumentException("File not found");
-            }
+    private List<String> sendPutRelayMessageToNode(Node node, PutRelayMessage putMessage) {
+        if (putMessage.getValues().size() == 0) {
+            return new ArrayList<>();
         }
 
-        if (putMessage.getValues().isEmpty()) {
-            return;
-        }
-        transferKeysAndDeleteLocals(joiningNode, putMessage);
-    }
-
-    private void transferKeysAndDeleteLocals(Node joiningNode, PutRelayMessage putMessage) {
         try {
-            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(joiningNode, putMessage, null);
+            PutRelayReply putReply = (PutRelayReply) CommunicationUtils.dispatchMessageToNode(node, putMessage, null);
             if (putReply == null) {
-                return;
+                return new ArrayList<>();
             }
-            for (String hash : putReply.getSuccessfulHashes()) {
-                this.getStorageService().delete(hash);
-            }
+
+            return putReply.getSuccessfulHashes();
         } catch (ClassCastException e) {
             e.printStackTrace();
         }
+
+        return new ArrayList<>();
     }
 
-    public void transferAllMyKeysToMySuccessor() {
-        Node successorNode = clusterMap.getNodeSuccessor(this.storageService.getNode());
-        if (successorNode.equals(this.storageService.getNode())) {
-            System.out.println("No successor node found");
-            return;
+    public void orderJoiningNodeToDeleteMyTombstones(Node joiningNode) {
+        for (String hash : storageService.getTombstones()) {
+            DeleteRelayMessage message = new DeleteRelayMessage();
+            message.setTransference(true);
+            message.setKey(hash);
+            CommunicationUtils.dispatchMessageToNode(joiningNode, message, null);
         }
+    }
 
-        PutRelayMessage putMessage = new PutRelayMessage();
-        for (String hash : getStorageService().getHashes()) {
-            try {
-                File file = new File(getStorageService().getValueFilePath(hash));
-                byte[] bytes = Files.readAllBytes(file.toPath());
-                putMessage.addValue(hash, bytes);
-            } catch (IOException e) {
-                throw new IllegalArgumentException("File not found");
+    public void transferMyKeysToCurrentResponsibleNodes() {
+        transferMyKeysToNodes(clusterMap.getNodes());
+    }
+
+    public void transferMyKeysToNodes(Set<Node> nodes) {
+        System.out.println("Transferring my keys to current responsible nodes...");
+        List<String> successfulHashes = new ArrayList<>();
+        final Map<String, Boolean> mustDeleteHash = new HashMap<>();
+        final Map<String, PutRelayMessage> putMessages = new HashMap<>();
+
+        for (String hash : this.getStorageService().getHashes()) {
+            synchronized (getStorageService().getHashLock(hash)) {
+                List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
+                mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
+
+                File file = new File(this.getStorageService().getValueFilePath(hash));
+                byte[] bytes;
+
+                try {
+                    bytes = Files.readAllBytes(file.toPath());
+                } catch (IOException ignored) {
+                    continue;
+                }
+
+                for (Node node : nodes) {
+                    boolean mustCopyHash = responsibleNodes.contains(node);
+                    if (!mustCopyHash) {
+                        continue;
+                    }
+                    if (node.id().equals(storageService.getNode().id())) {
+                        continue;
+                    }
+                    System.out.println("Transferring key " + hash + " to node " + node.id());
+
+                    PutRelayMessage putMessage = putMessages.containsKey(node.id()) ?
+                            putMessages.get(node.id()) :
+                            new PutRelayMessage();
+                    putMessage.setTransference(true);
+                    boolean full = putMessage.addValue(hash, bytes);
+
+                    if (full) {
+                        successfulHashes.addAll(sendPutRelayMessageToNode(node, putMessage));
+                        putMessage = new PutRelayMessage();
+                        putMessage.setTransference(true);
+                    }
+
+                    putMessages.put(node.id(), putMessage);
+                }
             }
         }
 
-        if (putMessage.getValues().size() == 0) {
-            return;
+        for (Map.Entry<String, PutRelayMessage> entry : putMessages.entrySet()) {
+            successfulHashes.addAll(
+                    sendPutRelayMessageToNode(
+                            clusterMap.getNodeFromId(
+                                    entry.getKey()
+                            ),
+                            entry.getValue()
+                    )
+            );
         }
-        transferKeysAndDeleteLocals(successorNode, putMessage);
+
+        for (String hash : successfulHashes) {
+            if (mustDeleteHash.getOrDefault(hash, Boolean.FALSE)) {
+                this.getStorageService().delete(hash, false);
+            }
+        }
     }
 
-    public void removeUnavailableNode(Node node) {
+    public void removeUnavailableNodeById(String id, boolean incrementCounter) {
+        Optional<Node> node = this.clusterMap.getNodes().stream().filter(n -> n.id().equals(id)).findFirst();
+        if (node.isEmpty()) {
+            return;
+        }
+        removeUnavailableNode(node.get(), incrementCounter);
+    }
+
+    public void removeUnavailableNode(Node node, boolean incrementCounter) {
+        boolean mustSendToNewSuccessor = clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
+                || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node);
+
         Integer nodeCounter = this.membershipLog.get(node.id());
-        if (nodeCounter != null) {
+        if (nodeCounter != null && incrementCounter) {
             this.membershipLog.put(node.id(), nodeCounter + 1);
         }
         this.clusterMap.remove(node);
         System.out.println(node + " is unavailable. Removed from cluster map");
+
+        if (mustSendToNewSuccessor) {
+            System.out.println("Updating key responsible nodes...");
+            transferMyKeysToCurrentResponsibleNodes();
+        }
     }
 }

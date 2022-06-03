@@ -9,7 +9,6 @@ import utils.StoreUtils;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -120,7 +119,7 @@ public class TestClient {
             try {
                 Registry registry = LocateRegistry.getRegistry(nodeAccessPoint.getIp());
                 MembershipRMI stub = (MembershipRMI) registry.lookup(nodeAccessPoint.getObjectName());
-                boolean response = clientArgs.operation.equals("join") ? stub.join() : stub.leave();
+                MembershipRMI.Status response = clientArgs.operation.equals("join") ? stub.join() : stub.leave();
                 System.out.println("response: " + response);
             } catch (Exception e) {
                 System.err.println("RMI error: " + e);
@@ -171,7 +170,7 @@ public class TestClient {
     }
 
     private record ClientArgs(String host, String operation, String operand) {
-        public ClientArgs(String host, String operation) {
+        private ClientArgs(String host, String operation) {
             this(host, operation, null);
         }
     }

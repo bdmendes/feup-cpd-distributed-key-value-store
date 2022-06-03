@@ -1,6 +1,5 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
 
 public interface MessageVisitor {
@@ -12,6 +11,10 @@ public interface MessageVisitor {
 
     }
 
+    default void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket socket) {
+
+    }
+
     default void processGet(GetMessage getMessage, Socket socket) {
 
     }
@@ -20,11 +23,11 @@ public interface MessageVisitor {
 
     }
 
-    default void processMembership(MembershipMessage membershipMessage, Socket socket) {
+    default void processMembership(MembershipMessage membershipMessage) {
 
     }
 
-    default void processJoin(JoinMessage joinMessage, Socket socket) {
+    default void processJoin(JoinMessage joinMessage) {
 
     }
 
@@ -36,22 +39,25 @@ public interface MessageVisitor {
 
     }
 
-    default void processPutRelayReply(PutRelayReply putReply, Socket socket) {
-
-    }
-
     default void processDeleteReply(DeleteReply deleteReply, Socket socket) {
 
     }
 
-    void process(Message message, Socket socket) throws IOException;
+    void process(Message message, Socket socket);
 
-    default void processElection(ElectionMessage electionMessage, Socket socket) {
-
-    }
-
-    default void processLeader(LeaderMessage leaderMessage, Socket socket) {
+    default void processElection(ElectionMessage electionMessage) {
 
     }
 
+    default void processLeader(LeaderMessage leaderMessage) {
+
+    }
+
+    default void processPutRelayReply(PutRelayReply putRelayReply, Socket socket) {
+
+    }
+
+    default void processGetRelay(GetRelayMessage getRelayMessage, Socket socket) {
+
+    }
 }

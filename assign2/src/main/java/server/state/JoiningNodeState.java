@@ -1,6 +1,8 @@
 package server.state;
 
+import message.DeleteRelayMessage;
 import message.PutRelayMessage;
+import server.MembershipRMI;
 import server.MembershipService;
 
 import java.net.Socket;
@@ -16,7 +18,12 @@ public class JoiningNodeState extends InitNodeState {
     }
 
     @Override
-    public boolean join() {
-        return true; // TODO: return IN_PROGRESS
+    public void processDeleteRelay(DeleteRelayMessage deleteRelayMessage, Socket clientSocket) {
+        CommonState.processDeleteRelay(deleteRelayMessage, clientSocket, this.membershipService);
+    }
+
+    @Override
+    public MembershipRMI.Status join() {
+        return MembershipRMI.Status.JOIN_IN_PROGRESS;
     }
 }

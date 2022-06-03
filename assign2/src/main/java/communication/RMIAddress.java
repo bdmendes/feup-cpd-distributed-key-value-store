@@ -6,11 +6,6 @@ public class RMIAddress extends Address {
     private final String ip;
     private final String objectName;
 
-    public RMIAddress(String ip, String objectName) {
-        this.ip = ip;
-        this.objectName = objectName;
-    }
-
     public RMIAddress(String address) {
         Matcher matcher = getMatcher(address);
 

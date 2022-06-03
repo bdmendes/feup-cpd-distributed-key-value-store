@@ -6,6 +6,7 @@ import utils.ClusterMap;
 import utils.StoreUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -63,5 +64,28 @@ public class ClusterMapTest {
     public void findSuccessorNode2() {
         assertEquals(new Node("127.0.0.1", 9002), clusterMap2.getNodeSuccessor(new Node("127.0.0.2", 9002)));
         assertEquals(new Node("127.0.0.2", 9002), clusterMap2.getNodeSuccessor(new Node("127.0.0.1", 9002)));
+    }
+
+
+    @Test
+    public void responsibleNodesCountMoreOrEqual() {
+        String data = "The quick brown fox jumps over the lazy dog"; // d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+        String hash = StoreUtils.sha256(data.getBytes(StandardCharsets.UTF_8));
+
+        Node node1 = new Node("127.0.0.1", 9002); // 12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0
+        Node node2 = new Node("127.0.0.2", 9002);
+
+        assertEquals(List.of(node2), clusterMap2.getReplicationNodes(node1, 2));
+        assertEquals(List.of(node1), clusterMap2.getReplicationNodes(node2, 3));
+    }
+
+    @Test
+    public void responsibleNodesCountLess() {
+        String data = "The quick brown fox jumps over the lazy dog"; // d7a8fbb307d7809469ca9abcb0082e4f8d5651e46d3cdb762d02d0bf37c9e592
+        String hash = StoreUtils.sha256(data.getBytes(StandardCharsets.UTF_8));
+
+        Node node = new Node("127.0.0.1", 9002); // 12ca17b49af2289436f303e0166030a21e525d266e209267433801a8fd4071a0
+
+        assertEquals(0, clusterMap2.getReplicationNodes(node, 1).size());
     }
 }

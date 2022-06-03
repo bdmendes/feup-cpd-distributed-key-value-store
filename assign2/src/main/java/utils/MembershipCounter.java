@@ -19,21 +19,22 @@ public class MembershipCounter {
         return counter.get();
     }
 
-    public synchronized void set(int newValue) {
-        counter.set(newValue);
-        writeToFile();
-    }
-
-    public synchronized int getAndIncrement() {
-        int c = counter.getAndIncrement();
-        writeToFile();
-        return c;
-    }
-
     public synchronized int incrementAndGet() {
         int c = counter.incrementAndGet();
         writeToFile();
         return c;
+    }
+
+    public int beginJoin() {
+        return counter.incrementAndGet();
+    }
+
+    public void commitJoin() {
+        writeToFile();
+    }
+
+    public void rollbackJoin() {
+        counter.decrementAndGet();
     }
 
     private void readFromFile() {
