@@ -25,12 +25,6 @@ public class MembershipCounter {
         return c;
     }
 
-    public synchronized int decrementAndGet() {
-        int c = counter.decrementAndGet();
-        writeToFile();
-        return c;
-    }
-
     public int beginJoin() {
         return counter.incrementAndGet();
     }

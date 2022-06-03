@@ -48,17 +48,10 @@ public class CommonState {
             String nodeId = entry.getKey();
             Integer membershipCounter = entry.getValue();
 
-            if (nodeId.equals(membershipService.getStorageService().getNode().id())) {
-                if(membershipCounter > membershipService.getNodeMembershipCounter()) {
-                    while(membershipCounter > membershipService.getNodeMembershipCounter()) {
-                        membershipService.getMembershipCounter().incrementAndGet();
-                    }
-                } else if (membershipCounter < membershipService.getNodeMembershipCounter()) {
-                    while(membershipCounter < membershipService.getNodeMembershipCounter()) {
-                        membershipService.getMembershipCounter().decrementAndGet();
-                    }
-                } else {
-                    continue;
+            if (nodeId.equals(membershipService.getStorageService().getNode().id())
+                    && membershipCounter > membershipService.getNodeMembershipCounter()) {
+                while(membershipCounter > membershipService.getNodeMembershipCounter()) {
+                    membershipService.getMembershipCounter().incrementAndGet();
                 }
 
                 membershipService.setNodeState(new InitNodeState(membershipService));
