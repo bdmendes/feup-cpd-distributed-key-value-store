@@ -6,7 +6,6 @@ import server.MembershipRMI;
 import server.MembershipService;
 import server.StorageService;
 
-import java.io.IOException;
 import java.net.Socket;
 
 public abstract class NodeState implements MessageVisitor {
@@ -19,7 +18,7 @@ public abstract class NodeState implements MessageVisitor {
     }
 
     @Override
-    public void process(Message message, Socket socket) throws IOException {
+    public void process(Message message, Socket socket) {
         message.accept(this, socket);
     }
 

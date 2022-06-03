@@ -2,7 +2,6 @@ package server;
 
 import message.Message;
 
-import java.io.IOException;
 import java.net.Socket;
 
 public class MessageProcessor implements Runnable {
@@ -18,10 +17,6 @@ public class MessageProcessor implements Runnable {
 
     @Override
     public void run() {
-        try {
-            this.membershipService.getNodeState().process(this.message, this.clientSocket);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        this.membershipService.getNodeState().process(this.message, this.clientSocket);
     }
 }

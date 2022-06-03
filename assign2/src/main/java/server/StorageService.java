@@ -12,6 +12,7 @@ public class StorageService {
     private final Node node;
     private final Map<String, Object> hashLocks = Collections.synchronizedMap(new HashMap<>());
     private final Set<String> tombstones = Collections.synchronizedSet(new HashSet<>());
+    public static String STORAGE_ROOT_PATH = "./node_storage";
 
     public StorageService(Node node) throws IOException {
         this.node = node;
@@ -77,7 +78,7 @@ public class StorageService {
     }
 
     public String getStorageDirectory() {
-        return getStorageRootPath() + "/storage" + node;
+        return STORAGE_ROOT_PATH + "/storage" + node;
     }
 
     public Set<String> getHashes() {
@@ -129,9 +130,5 @@ public class StorageService {
         for (File file : files) {
             tombstones.add(file.getName());
         }
-    }
-
-    public static String getStorageRootPath() {
-        return "./node_storage";
     }
 }

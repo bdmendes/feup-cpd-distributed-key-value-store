@@ -1,6 +1,5 @@
 package message;
 
-import java.io.IOException;
 import java.net.Socket;
 
 public interface MessageVisitor {
@@ -44,7 +43,7 @@ public interface MessageVisitor {
 
     }
 
-    void process(Message message, Socket socket) throws IOException;
+    void process(Message message, Socket socket);
 
     default void processElection(ElectionMessage electionMessage) {
 
