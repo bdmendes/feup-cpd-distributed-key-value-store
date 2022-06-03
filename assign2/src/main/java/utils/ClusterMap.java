@@ -61,20 +61,22 @@ public class ClusterMap {
         return this.getNodeSuccessor(hash);
     }
 
-    private synchronized Node getNodeSuccessor(String hash) {
-        if (clusterNodes.isEmpty()) {
-            return null;
-        }
-
-        for (Map.Entry<String, Node> entry : clusterNodes.entrySet()) {
-            String currentNodeHash = entry.getKey();
-            Node currentNode = entry.getValue();
-            if (currentNodeHash.compareTo(hash) > 0) {
-                return currentNode;
+    private Node getNodeSuccessor(String hash) {
+        synchronized (clusterNodes) {
+            if (clusterNodes.isEmpty()) {
+                return null;
             }
-        }
 
-        return clusterNodes.values().iterator().next();
+            for (Map.Entry<String, Node> entry : clusterNodes.entrySet()) {
+                String currentNodeHash = entry.getKey();
+                Node currentNode = entry.getValue();
+                if (currentNodeHash.compareTo(hash) > 0) {
+                    return currentNode;
+                }
+            }
+
+            return clusterNodes.values().iterator().next();
+        }
     }
 
     private void readFromFile() {

@@ -198,11 +198,13 @@ public class MembershipService implements MembershipRMI {
     }
 
     public void orderJoiningNodeToDeleteMyTombstones(Node joiningNode) {
-        for (String hash : storageService.getTombstones()) {
-            DeleteRelayMessage message = new DeleteRelayMessage();
-            message.setTransference(true);
-            message.setKey(hash);
-            CommunicationUtils.dispatchMessageToNode(joiningNode, message, null);
+        synchronized (this.storageService.getTombstones()) {
+            for (String hash : storageService.getTombstones()) {
+                DeleteRelayMessage message = new DeleteRelayMessage();
+                message.setTransference(true);
+                message.setKey(hash);
+                CommunicationUtils.dispatchMessageToNode(joiningNode, message, null);
+            }
         }
     }
 
@@ -216,8 +218,8 @@ public class MembershipService implements MembershipRMI {
         final Map<String, Boolean> mustDeleteHash = new HashMap<>();
         final Map<String, PutRelayMessage> putMessages = new HashMap<>();
 
-        for (String hash : this.getStorageService().getHashes()) {
-            synchronized (getStorageService().getHashLock(hash)) {
+        synchronized (this.getStorageService().getHashLocks()) {
+            for (String hash : this.getStorageService().getHashes()) {
                 List<Node> responsibleNodes = this.getClusterMap().getNodesResponsibleForHash(hash, REPLICATION_FACTOR);
                 mustDeleteHash.put(hash, !responsibleNodes.contains(getStorageService().getNode()));
 
@@ -231,11 +233,11 @@ public class MembershipService implements MembershipRMI {
                 }
 
                 for (Node node : nodes) {
-                    boolean mustCopyHash = responsibleNodes.contains(node);
-                    if (!mustCopyHash) {
+                    if (node.id().equals(storageService.getNode().id())) {
                         continue;
                     }
-                    if (node.id().equals(storageService.getNode().id())) {
+                    boolean mustCopyHash = responsibleNodes.contains(node);
+                    if (!mustCopyHash) {
                         continue;
                     }
                     System.out.println("Transferring key " + hash + " to node " + node.id());
@@ -287,10 +289,13 @@ public class MembershipService implements MembershipRMI {
         boolean mustSendToNewSuccessor = clusterMap.getNodeSuccessor(node).equals(storageService.getNode())
                 || clusterMap.getNodeSuccessor(storageService.getNode()).equals(node);
 
-        Integer nodeCounter = this.membershipLog.get(node.id());
-        if (nodeCounter != null && incrementCounter) {
-            this.membershipLog.put(node.id(), nodeCounter + 1);
+        synchronized (this.membershipLog.getMap()) {
+            Integer nodeCounter = this.membershipLog.get(node.id());
+            if (nodeCounter != null && nodeCounter % 2 == 0 && incrementCounter) {
+                this.membershipLog.put(node.id(), nodeCounter + 1);
+            }
         }
+
         this.clusterMap.remove(node);
         System.out.println(node + " is unavailable. Removed from cluster map");
 

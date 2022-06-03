@@ -16,13 +16,18 @@ public class CommonState {
         if (membershipMessage.getNodeId().equals(membershipService.getStorageService().getNode().id())) {
             System.out.println("Received membership message from myself");
         }
+        boolean imInCluster = false;
 
         Map<String, Integer> recentLogs = membershipService.getMembershipLog(32);
         for (Node node : membershipMessage.getNodes()) {
-            if (node.id().equals(membershipService.getStorageService().getNode().id())
-                    && node.port() != membershipService.getStorageService().getNode().port()) {
-                System.err.println("IDs must be unique in this cluster. This node is invalid. Exiting...");
-                System.exit(1);
+            if (node.id().equals(membershipService.getStorageService().getNode().id())) {
+                if(node.port() != membershipService.getStorageService().getNode().port()) {
+                    System.err.println("IDs must be unique in this cluster. This node is invalid. Exiting...");
+                    System.exit(1);
+                } else {
+                    imInCluster = true;
+                    continue;
+                }
             }
             boolean loggedRecently = recentLogs.containsKey(node.id());
             if (!loggedRecently) {
@@ -30,15 +35,32 @@ public class CommonState {
             }
         }
 
+        if(!imInCluster) {
+            System.err.println("I'm not in the membership message.");
+
+            membershipService.getMembershipCounter().incrementAndGet();
+            membershipService.setNodeState(new InitNodeState(membershipService));
+            membershipService.join();
+            return;
+        }
+
         for (Map.Entry<String, Integer> entry : membershipMessage.getMembershipLog().entrySet()) {
             String nodeId = entry.getKey();
             Integer membershipCounter = entry.getValue();
 
-            if (nodeId.equals(membershipService.getStorageService().getNode().id())
-                    && membershipCounter > membershipService.getNodeMembershipCounter()) {
-                while (membershipCounter > membershipService.getNodeMembershipCounter()) {
-                    membershipService.getMembershipCounter().incrementAndGet();
+            if (nodeId.equals(membershipService.getStorageService().getNode().id())) {
+                if(membershipCounter > membershipService.getNodeMembershipCounter()) {
+                    while(membershipCounter > membershipService.getNodeMembershipCounter()) {
+                        membershipService.getMembershipCounter().incrementAndGet();
+                    }
+                } else if (membershipCounter < membershipService.getNodeMembershipCounter()) {
+                    while(membershipCounter < membershipService.getNodeMembershipCounter()) {
+                        membershipService.getMembershipCounter().decrementAndGet();
+                    }
+                } else {
+                    continue;
                 }
+
                 membershipService.setNodeState(new InitNodeState(membershipService));
                 membershipService.join();
                 continue;

@@ -85,6 +85,10 @@ public class StorageService {
         return hashLocks.keySet();
     }
 
+    public Map<String, Object> getHashLocks() {
+        return hashLocks;
+    }
+
     public Set<String> getTombstones() {
         return tombstones;
     }

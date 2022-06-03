@@ -105,12 +105,18 @@ public class MembershipServiceTest {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService);
         membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("-1", -1));
+
         membershipService.getMembershipLog().put("1", 0);
+        membershipService.getMembershipLog().put("-1", 0);
+
 
         Set<Node> messageNodes = new HashSet<>();
         messageNodes.add(new Node("1", -1));
         messageNodes.add(new Node("2", -1));
+        messageNodes.add(new Node("-1", -1));
         Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("-1", 0);
         messageEvents.put("1", 0);
         messageEvents.put("2", 0);
         MembershipMessage membershipMessage = new MembershipMessage();
@@ -118,8 +124,8 @@ public class MembershipServiceTest {
         membershipMessage.setMembershipLog(messageEvents);
 
         CommonState.processMembership(membershipMessage, membershipService);
-        assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
-        assertEquals(membershipService.getMembershipLog(32).size(), 2);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 3);
+        assertEquals(membershipService.getMembershipLog(32).size(), 3);
         assertEquals(membershipService.getMembershipLog(32).get("2"), 0);
     }
 
@@ -127,14 +133,19 @@ public class MembershipServiceTest {
     void testMembershipMergeKnownNodeLeft() throws IOException {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService);
+        membershipService.getClusterMap().put(new Node("-1", -1));
         membershipService.getClusterMap().put(new Node("1", -1));
         membershipService.getClusterMap().put(new Node("2", -1));
+        membershipService.getMembershipLog().put("-1", 0);
         membershipService.getMembershipLog().put("1", 0);
         membershipService.getMembershipLog().put("2", 0);
 
         Set<Node> messageNodes = new HashSet<>();
         messageNodes.add(new Node("1", -1));
+        messageNodes.add(new Node("-1", -1));
+
         Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("-1", 0);
         messageEvents.put("1", 0);
         messageEvents.put("2", 1);
         MembershipMessage membershipMessage = new MembershipMessage();
@@ -142,7 +153,7 @@ public class MembershipServiceTest {
         membershipMessage.setMembershipLog(messageEvents);
 
         CommonState.processMembership(membershipMessage, membershipService);
-        assertEquals(membershipService.getClusterMap().getNodes().size(), 1);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
         assertEquals(membershipService.getMembershipLog(32).get("2"), 1);
     }
 
@@ -151,13 +162,18 @@ public class MembershipServiceTest {
         StorageService storageService = new StorageService(new Node("-1", -1));
         MembershipService membershipService = new MembershipService(storageService);
         membershipService.getClusterMap().put(new Node("1", -1));
+        membershipService.getClusterMap().put(new Node("-1", -1));
+
+        membershipService.getMembershipLog().put("-1", 0);
         membershipService.getMembershipLog().put("1", 0);
         membershipService.getMembershipLog().put("2", 1);
 
         Set<Node> messageNodes = new HashSet<>();
+        messageNodes.add(new Node("-1", -1));
         messageNodes.add(new Node("1", -1));
         messageNodes.add(new Node("2", -1));
         Map<String, Integer> messageEvents = new HashMap<>();
+        messageEvents.put("-1", 0);
         messageEvents.put("1", 0);
         messageEvents.put("2", 2);
         MembershipMessage membershipMessage = new MembershipMessage();
@@ -165,7 +181,7 @@ public class MembershipServiceTest {
         membershipMessage.setMembershipLog(messageEvents);
 
         CommonState.processMembership(membershipMessage, membershipService);
-        assertEquals(membershipService.getClusterMap().getNodes().size(), 2);
+        assertEquals(membershipService.getClusterMap().getNodes().size(), 3);
         assertEquals(membershipService.getMembershipLog(32).get("2"), 2);
     }
 
