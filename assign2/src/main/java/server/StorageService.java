@@ -77,7 +77,7 @@ public class StorageService {
     }
 
     public String getStorageDirectory() {
-        return "./node_storage/storage" + node;
+        return getStorageRootPath() + "/storage" + node;
     }
 
     public Set<String> getHashes() {
@@ -129,5 +129,9 @@ public class StorageService {
         for (File file : files) {
             tombstones.add(file.getName());
         }
+    }
+
+    public static String getStorageRootPath() {
+        return "./node_storage";
     }
 }

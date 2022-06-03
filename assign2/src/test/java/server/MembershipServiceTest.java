@@ -1,6 +1,7 @@
 package server;
 
 import message.MembershipMessage;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import server.state.CommonState;
@@ -19,21 +20,13 @@ public class MembershipServiceTest {
         deleteTestAssets();
     }
 
-    //@AfterAll
+    @AfterAll
+    static void deleteTestAssetsAfterAll() throws IOException {
+        deleteTestAssets();
+    }
+
     static void deleteTestAssets() throws IOException {
-        StorageService storageService = new StorageService(new Node("-1", -1));
-        File directory = new File(storageService.getStorageDirectory());
-        if (directory.exists()) {
-            File[] files = directory.listFiles();
-            if (files == null) {
-                return;
-            }
-            for (File file : files) {
-                if (!file.delete()) {
-                    return;
-                }
-            }
-        }
+        StorageServiceTest.deleteTestAssets(new File((new StorageService(new Node("-1", -1))).getStorageDirectory()));
     }
 
     @Test

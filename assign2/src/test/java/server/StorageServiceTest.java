@@ -1,6 +1,7 @@
 package server;
 
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -10,21 +11,33 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class StorageServiceTest {
 
+    @BeforeEach
+    void deleteTestAssetsBeforeEach() throws IOException {
+        deleteTestAssets(new File((new StorageService(new Node("-1", 100))).getStorageDirectory()));
+    }
+
     @AfterAll
-    static void deleteTestAssets() throws IOException {
-        StorageService storageService = new StorageService(new Node("-1", 100));
-        File directory = new File(storageService.getValueFilesDirectory());
-        if (directory.exists()) {
-            File[] files = directory.listFiles();
-            if (files == null) {
-                return;
-            }
+    static void deleteTestAssetsAfterAll() throws IOException {
+        deleteTestAssets(new File((new StorageService(new Node("-1", 100))).getStorageDirectory()));
+    }
+
+    static void deleteTestAssets(File directory) {
+        if (!directory.exists()) {
+            return;
+        }
+
+        File[] files = directory.listFiles();
+        if (files != null) {
             for (File file : files) {
-                if (!file.delete()) {
-                    return;
+                if (file.isDirectory()) {
+                    deleteTestAssets(file);
+                } else {
+                    file.delete();
                 }
             }
         }
+        directory.delete();
+        directory.getParentFile().delete();
     }
 
     @Test

@@ -1,6 +1,5 @@
 package message;
 
-import message.MessageConstants;
 import message.messagereader.MessageReader;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -8,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.io.*;
 
 class MessageReaderTest {
-
 
     @Test
     void readMessage() throws IOException {
@@ -30,7 +28,7 @@ class MessageReaderTest {
         InputStream inputStream = new ByteArrayInputStream(message);
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
-        while(!reader.isComplete()) {
+        while (!reader.isComplete()) {
             reader.read(bufferedReader);
         }
 
